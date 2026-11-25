@@ -1,0 +1,76 @@
+:root {
+  /* Typography */
+  --font-sans: "Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  --text-xs: 0.75rem;     /* 12px */
+  --text-sm: 0.875rem;    /* 14px */
+  --text-base: 1rem;      /* 16px */
+  --text-lg: 1.125rem;    /* 18px */
+  --text-xl: 1.25rem;     /* 20px */
+  --text-2xl: 1.5rem;     /* 24px */
+
+  /* Neutral Base Palette */
+  --color-bg-page: #f5f6f8;
+  --color-bg-surface: #ffffff;
+  --color-bg-subtle: #f1f3f5;
+  --color-bg-hover: #e9ecef;
+
+  --color-border: #d8dde3;
+  --color-border-strong: #94a3b8;
+  --color-border-input: #6b7280;
+
+  --color-text-primary: #18181b;
+  --color-text-secondary: #475569;
+  --color-text-muted: #64748b;
+
+  /* Surakarta Crimson Accent (restrained, high-contrast) */
+  --color-accent: #9f1239;
+  --color-accent-hover: #881337;
+  --color-accent-subtle: #fff1f2;
+  --color-accent-border: #fecdd3;
+  --color-accent-text: #881337;
+
+  /* Semantic Status Colors */
+  --color-success: #15803d;
+  --color-success-bg: #f0fdf4;
+  --color-success-border: #bbf7d0;
+
+  --color-warning: #b45309;
+  --color-warning-bg: #fffbeb;
+  --color-warning-border: #fde68a;
+
+  --color-danger: #b91c1c;
+  --color-danger-bg: #fef2f2;
+  --color-danger-border: #fecaca;
+
+  --color-info: #1d4ed8;
+  --color-info-bg: #eff6ff;
+  --color-info-border: #bfdbfe;
+
+  /* Focus Ring */
+  --color-focus: #1d4ed8;
+
+  /* Spacing Scale (4px base) */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+
+  /* Border Radius (restrained, non-bubbly) */
+  --radius-sm: 0.25rem;   /* 4px */
+  --radius-md: 0.375rem;  /* 6px */
+  --radius-lg: 0.5rem;    /* 8px */
+
+  /* Elevation (minimal) */
+  --shadow-none: none;
+  --shadow-sm: 0 1px 2px 0 rgb(15 23 42 / 0.06);
+  --shadow-modal: 0 10px 25px -5px rgb(15 23 42 / 0.14);
+
+  /* Layout Dimensions */
+  --sidebar-width: 15rem; /* 240px */
+  --topbar-height: 3.5rem; /* 56px */
+}

@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build outputs
+dist/
+**/dist/
+build/
+**/.vite/
+
+# Environment & secrets
+.env
+**/.env
+.env.local
+**/.env.local
+.env.*.local
+
+# Python
+__pycache__/
+**/__pycache__/
+*.py[cod]
+.venv/
+**/.venv/
+venv/
+**/venv/
+
+# Private storage & models
+storage/
+**/storage/
+face-service/models/*.onnx
+face-service/models/*.bin
+
+# Logs & OS
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
