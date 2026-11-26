@@ -16,7 +16,8 @@
     "db:seed-admin": "tsx src/scripts/seedAdmin.ts",
     "test:admin-auth": "tsx src/scripts/testAdminAuth.ts",
     "test:participant-reg": "tsx src/scripts/testParticipantRegistration.ts",
-    "test:attendance": "tsx src/scripts/testAttendanceSystem.ts"
+    "test:attendance": "tsx src/scripts/testAttendanceSystem.ts",
+    "test:admin-dashboard": "tsx src/scripts/testAdminDashboard.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.6.0",
