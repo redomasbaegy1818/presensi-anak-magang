@@ -5,11 +5,16 @@ import type {
   ParticipantRegistrationPayload,
 } from '../types/domain.ts';
 
-export type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';
+export type AuthStatus =
+  | 'loading'
+  | 'authenticated'
+  | 'unauthenticated'
+  | 'error';
 
 export interface AuthContextValue {
   user: AuthUser | null;
   status: AuthStatus;
+  sessionError: string | null;
   loginAdmin: (identifier: string, password: string) => Promise<AuthUser>;
   loginParticipant: (email: string, password: string) => Promise<AuthUser>;
   registerParticipant: (

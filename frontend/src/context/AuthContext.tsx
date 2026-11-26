@@ -5,6 +5,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { ApiError } from '../services/apiClient.ts';
 import {
   getAuthSession,
   loginAdminRequest,
@@ -18,11 +19,21 @@ import type {
 } from '../types/domain.ts';
 import { AuthContext, type AuthStatus } from './authContextValue.ts';
 
+function isTransientSessionError(error: unknown): boolean {
+  if (error instanceof ApiError) {
+    return error.status === 0 || error.status === 408 || error.status >= 500;
+  }
+  return true;
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [status, setStatus] = useState<AuthStatus>('loading');
+  const [sessionError, setSessionError] = useState<string | null>(null);
 
   const refreshSession = useCallback(async () => {
+    setStatus('loading');
+    setSessionError(null);
     try {
       const data = await getAuthSession();
       if (data.authenticated && data.user) {
@@ -32,9 +43,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null);
         setStatus('unauthenticated');
       }
-    } catch {
+    } catch (error) {
       setUser(null);
-      setStatus('unauthenticated');
+      if (isTransientSessionError(error)) {
+        setSessionError(
+          error instanceof Error
+            ? error.message
+            : 'Tidak dapat terhubung ke server.',
+        );
+        setStatus('error');
+      } else {
+        setStatus('unauthenticated');
+      }
     }
   }, []);
 
@@ -43,6 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     getAuthSession()
       .then((data) => {
         if (!active) return;
+        setSessionError(null);
         if (data.authenticated && data.user) {
           setUser(data.user);
           setStatus('authenticated');
@@ -51,10 +72,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setStatus('unauthenticated');
         }
       })
-      .catch(() => {
+      .catch((error: unknown) => {
         if (!active) return;
         setUser(null);
-        setStatus('unauthenticated');
+        if (isTransientSessionError(error)) {
+          setSessionError(
+            error instanceof Error
+              ? error.message
+              : 'Tidak dapat terhubung ke server.',
+          );
+          setStatus('error');
+        } else {
+          setStatus('unauthenticated');
+        }
       });
 
     return () => {
@@ -67,6 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!res.authenticated || !res.user) {
       throw new Error('Gagal memulai sesi admin.');
     }
+    setSessionError(null);
     setUser(res.user);
     setStatus('authenticated');
     return res.user;
@@ -77,6 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!res.authenticated || !res.user) {
       throw new Error('Gagal memulai sesi peserta.');
     }
+    setSessionError(null);
     setUser(res.user);
     setStatus('authenticated');
     return res.user;
@@ -88,6 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!res.authenticated || !res.user) {
         throw new Error('Pendaftaran berhasil tetapi sesi belum aktif.');
       }
+      setSessionError(null);
       setUser(res.user);
       setStatus('authenticated');
       return res;
@@ -99,12 +132,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await logoutRequest();
     } finally {
+      setSessionError(null);
       setUser(null);
       setStatus('unauthenticated');
     }
   }, []);
 
   const clearAuthenticatedUser = useCallback(() => {
+    setSessionError(null);
     setUser(null);
     setStatus('unauthenticated');
   }, []);
@@ -113,6 +148,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       user,
       status,
+      sessionError,
       loginAdmin,
       loginParticipant,
       registerParticipant,
@@ -123,6 +159,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [
       user,
       status,
+      sessionError,
       loginAdmin,
       loginParticipant,
       registerParticipant,

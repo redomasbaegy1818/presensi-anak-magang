@@ -22,33 +22,67 @@ export class ApiError extends Error {
 
 interface RequestOptions extends Omit<RequestInit, 'body'> {
   body?: unknown;
+  timeoutMs?: number;
 }
 
 export async function apiRequest<T>(
   path: string,
   options: RequestOptions = {},
 ): Promise<T> {
-  const { body, headers, ...rest } = options;
+  const { body, headers, timeoutMs, signal: externalSignal, ...rest } = options;
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
   const isFormData =
     typeof FormData !== 'undefined' && body instanceof FormData;
+  const effectiveTimeoutMs = timeoutMs ?? (isFormData ? 25_000 : 15_000);
 
-  const response = await fetch(`${API_BASE_URL}${normalizedPath}`, {
-    credentials: 'include',
-    headers: {
-      ...(isFormData || body === undefined
-        ? {}
-        : { 'Content-Type': 'application/json' }),
-      ...headers,
-    },
-    body:
-      body === undefined
-        ? undefined
-        : isFormData
-          ? body
-          : JSON.stringify(body),
-    ...rest,
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), effectiveTimeoutMs);
+  if (externalSignal) {
+    if (externalSignal.aborted) {
+      controller.abort();
+    } else {
+      externalSignal.addEventListener('abort', () => controller.abort(), {
+        once: true,
+      });
+    }
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}${normalizedPath}`, {
+      credentials: 'include',
+      headers: {
+        ...(isFormData || body === undefined
+          ? {}
+          : { 'Content-Type': 'application/json' }),
+        ...headers,
+      },
+      body:
+        body === undefined
+          ? undefined
+          : isFormData
+            ? body
+            : JSON.stringify(body),
+      signal: controller.signal,
+      ...rest,
+    });
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new ApiError(
+        408,
+        'REQUEST_TIMEOUT',
+        'Permintaan melebihi batas waktu. Periksa koneksi jaringan Anda lalu coba lagi.',
+      );
+    }
+    throw new ApiError(
+      0,
+      'NETWORK_ERROR',
+      'Tidak dapat terhubung ke server. Periksa koneksi atau pastikan backend berjalan.',
+    );
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   const contentType = response.headers.get('content-type') ?? '';
   const payload = contentType.includes('application/json')
@@ -56,14 +90,19 @@ export async function apiRequest<T>(
     : null;
 
   if (!response.ok) {
+    const isProxyDown = response.status >= 502 && !payload;
     const errorCode =
       payload && typeof payload.error === 'string'
         ? payload.error
-        : 'REQUEST_FAILED';
+        : isProxyDown
+          ? 'SERVICE_UNAVAILABLE'
+          : 'REQUEST_FAILED';
     const message =
       payload && typeof payload.message === 'string'
         ? payload.message
-        : 'Permintaan belum dapat diproses oleh server.';
+        : isProxyDown
+          ? 'Layanan server sedang tidak dapat dijangkau. Pastikan backend berjalan lalu coba lagi.'
+          : 'Permintaan belum dapat diproses oleh server.';
     const details =
       payload &&
       payload.details &&

@@ -182,10 +182,36 @@ export async function downloadAdminReportFile(
   const qs = new URLSearchParams(buildReportQueryString(params));
   qs.set('format', format);
 
-  const response = await fetch(`${base}/admin/reports/export?${qs.toString()}`, {
-    method: 'GET',
-    credentials: 'include',
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30_000);
+
+  let response: Response;
+  try {
+    response = await fetch(
+      `${base}/admin/reports/export?${qs.toString()}`,
+      {
+        method: 'GET',
+        credentials: 'include',
+        signal: controller.signal,
+      },
+    );
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new ApiError(
+        408,
+        'REQUEST_TIMEOUT',
+        'Unduhan laporan melebihi batas waktu. Coba perkecil rentang tanggal atau ulangi lagi.',
+      );
+    }
+    throw new ApiError(
+      0,
+      'NETWORK_ERROR',
+      'Tidak dapat terhubung ke server saat mengunduh laporan.',
+    );
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   if (!response.ok) {
     const contentType = response.headers.get('content-type') ?? '';

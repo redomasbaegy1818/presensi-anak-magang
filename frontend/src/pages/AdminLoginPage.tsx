@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { Alert, LoadingState } from '../components/ui/index.ts';
+import { Alert, Button, LoadingState } from '../components/ui/index.ts';
 import { LoginForm, type LoginFormValues } from '../forms/LoginForm.tsx';
 import { useAuth } from '../hooks/useAuth.ts';
 import { usePageTitle } from '../hooks/usePageTitle.ts';
@@ -43,7 +43,7 @@ export default function AdminLoginPage() {
   usePageTitle('Masuk Admin');
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, status, loginAdmin } = useAuth();
+  const { user, status, sessionError, refreshSession, loginAdmin } = useAuth();
 
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -114,6 +114,22 @@ export default function AdminLoginPage() {
           {errorMessage ? (
             <Alert tone="danger" title="Gagal Masuk">
               {errorMessage}
+            </Alert>
+          ) : status === 'error' && sessionError ? (
+            <Alert
+              tone="warning"
+              title="Koneksi Server Terganggu"
+              action={
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => void refreshSession()}
+                >
+                  Coba Lagi
+                </Button>
+              }
+            >
+              {sessionError}
             </Alert>
           ) : (
             notice && (
