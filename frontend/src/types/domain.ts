@@ -310,3 +310,65 @@ export interface AttendanceMarkResponse {
   message: string;
   attendance?: AttendanceConfirmationData;
 }
+
+export type ReportType = 'daily' | 'weekly' | 'monthly' | 'participant';
+export type ReportExportFormat = 'xlsx' | 'pdf';
+
+export interface ReportGroupedRow {
+  key: string;
+  label: string;
+  secondaryLabel: string;
+  participantCount: number;
+  expectedDays: number;
+  presentCount: number;
+  lateCount: number;
+  absentCount: number;
+  totalAttendance: number;
+  totalRecords: number;
+  attendancePercentage: number;
+}
+
+export interface ReportDetailRow {
+  id: string;
+  participantId: string;
+  participantName: string;
+  nimNis: string;
+  division: string;
+  attendanceDate: string;
+  checkInAt: string | null;
+  checkOutAt: string | null;
+  status: AttendanceStatus;
+  isCorrected: boolean;
+}
+
+export interface AdminAttendanceReportResponse {
+  filters: {
+    reportType: ReportType;
+    startDate: string;
+    endDate: string;
+    participantId: string;
+    division: string;
+    status: 'ALL' | AttendanceStatus;
+  };
+  summary: {
+    totalRecords: number;
+    totalAttendance: number;
+    presentCount: number;
+    lateCount: number;
+    absentCount: number;
+    uniqueParticipants: number;
+    attendancePercentage: number;
+  };
+  groupedRows: ReportGroupedRow[];
+  detailRows: ReportDetailRow[];
+  filterOptions: {
+    participants: {
+      id: string;
+      fullName: string;
+      nimNis: string;
+      division: string;
+    }[];
+    divisions: string[];
+  };
+  generatedAt: string;
+}

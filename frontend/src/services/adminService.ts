@@ -1,14 +1,18 @@
 import type {
   AdminAttendanceDetailRecord,
   AdminAttendanceListResponse,
+  AdminAttendanceReportResponse,
   AdminCorrectAttendancePayload,
   AdminParticipantDetailResponse,
   AdminParticipantsListResponse,
   AdminParticipantUpdatePayload,
+  AttendanceStatus,
   ParticipantProfile,
   ParticipantStatus,
+  ReportExportFormat,
+  ReportType,
 } from '../types/domain.ts';
-import { apiRequest } from './apiClient.ts';
+import { ApiError, apiRequest } from './apiClient.ts';
 
 export interface AdminParticipantsFilterParams {
   search?: string;
@@ -130,4 +134,80 @@ export function getAdminEvidenceUrl(
   const base =
     import.meta.env.VITE_API_BASE_URL?.replace(/\/+$/, '') || '/api/v1';
   return `${base}/admin/attendance/${encodeURIComponent(attendanceId)}/evidence/${type}`;
+}
+
+export interface AdminReportFilterParams {
+  reportType?: ReportType;
+  startDate?: string;
+  endDate?: string;
+  participantId?: string;
+  division?: string;
+  status?: 'ALL' | AttendanceStatus;
+}
+
+function buildReportQueryString(params: AdminReportFilterParams): string {
+  const qs = new URLSearchParams();
+  if (params.reportType) qs.set('reportType', params.reportType);
+  if (params.startDate) qs.set('startDate', params.startDate);
+  if (params.endDate) qs.set('endDate', params.endDate);
+  if (params.participantId && params.participantId !== 'ALL') {
+    qs.set('participantId', params.participantId);
+  }
+  if (params.division && params.division !== 'ALL') {
+    qs.set('division', params.division);
+  }
+  if (params.status && params.status !== 'ALL') {
+    qs.set('status', params.status);
+  }
+  return qs.toString();
+}
+
+export function getAdminReports(
+  params: AdminReportFilterParams = {},
+): Promise<AdminAttendanceReportResponse> {
+  const queryString = buildReportQueryString(params);
+  return apiRequest<AdminAttendanceReportResponse>(
+    `/admin/reports${queryString ? `?${queryString}` : ''}`,
+  );
+}
+
+export async function downloadAdminReportFile(
+  params: AdminReportFilterParams,
+  format: ReportExportFormat,
+): Promise<{ blob: Blob; filename: string }> {
+  const base =
+    import.meta.env.VITE_API_BASE_URL?.replace(/\/+$/, '') || '/api/v1';
+  const qs = new URLSearchParams(buildReportQueryString(params));
+  qs.set('format', format);
+
+  const response = await fetch(`${base}/admin/reports/export?${qs.toString()}`, {
+    method: 'GET',
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    const contentType = response.headers.get('content-type') ?? '';
+    const payload = contentType.includes('application/json')
+      ? await response.json().catch(() => null)
+      : null;
+    const errorCode =
+      payload && typeof payload.error === 'string'
+        ? payload.error
+        : 'EXPORT_FAILED';
+    const message =
+      payload && typeof payload.message === 'string'
+        ? payload.message
+        : 'Gagal mengekspor laporan kehadiran.';
+    throw new ApiError(response.status, errorCode, message);
+  }
+
+  const disposition = response.headers.get('content-disposition') ?? '';
+  const match = /filename="([^"]+)"/.exec(disposition);
+  const fallbackName = `laporan-presensi.${format}`;
+  const blob = await response.blob();
+
+  return {
+    blob,
+    filename: match?.[1] ?? fallbackName,
+  };
 }
