@@ -66,6 +66,31 @@ export interface AdminOverviewResponse {
   checkedAt: string;
 }
 
+export interface AdminParticipantsListResponse {
+  participants: ParticipantProfile[];
+  total: number;
+  page: number;
+  limit: number;
+  divisions: string[];
+}
+
+export interface AdminParticipantDetailResponse {
+  participant: ParticipantProfile;
+  recentAttendances: AttendanceRecordItem[];
+}
+
+export interface AdminParticipantUpdatePayload {
+  fullName: string;
+  nimNis: string;
+  universitySchool: string;
+  major: string;
+  division: string;
+  phone: string;
+  email: string;
+  internshipStartDate: string;
+  internshipEndDate: string;
+}
+
 export type ParticipantStatus = 'ACTIVE' | 'INACTIVE';
 
 export type AttendanceStatus = 'PRESENT' | 'LATE' | 'ABSENT';
