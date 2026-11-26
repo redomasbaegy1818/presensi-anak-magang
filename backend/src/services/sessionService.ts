@@ -1,9 +1,18 @@
-import type { UserRole } from '@prisma/client';
+import type { ParticipantStatus, UserRole } from '@prisma/client';
 import { env } from '../config/env.js';
 import { prisma } from '../lib/prisma.js';
 import { hashSessionToken } from '../utils/crypto.js';
 
 export type { UserRole };
+
+export interface AuthParticipantSummary {
+  id: string;
+  fullName: string;
+  nimNis: string;
+  division: string;
+  status: ParticipantStatus;
+  faceRegistered: boolean;
+}
 
 export interface AuthUserContext {
   userId: string;
@@ -11,6 +20,7 @@ export interface AuthUserContext {
   username: string | null;
   role: UserRole;
   isActive: boolean;
+  participant: AuthParticipantSummary | null;
 }
 
 /**
@@ -39,6 +49,20 @@ export async function resolveSessionByToken(
             username: true,
             role: true,
             isActive: true,
+            participant: {
+              select: {
+                id: true,
+                fullName: true,
+                nimNis: true,
+                division: true,
+                status: true,
+                faceTemplate: {
+                  select: {
+                    id: true,
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -53,12 +77,24 @@ export async function resolveSessionByToken(
       return null;
     }
 
+    const p = session.user.participant;
+
     return {
       userId: session.user.id,
       email: session.user.email,
       username: session.user.username,
       role: session.user.role,
       isActive: session.user.isActive,
+      participant: p
+        ? {
+            id: p.id,
+            fullName: p.fullName,
+            nimNis: p.nimNis,
+            division: p.division,
+            status: p.status,
+            faceRegistered: Boolean(p.faceTemplate),
+          }
+        : null,
     };
   } catch {
     return null;

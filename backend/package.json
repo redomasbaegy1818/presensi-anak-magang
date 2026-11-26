@@ -14,7 +14,8 @@
     "prisma:migrate": "prisma migrate deploy",
     "db:verify": "tsx src/scripts/verifyDatabase.ts",
     "db:seed-admin": "tsx src/scripts/seedAdmin.ts",
-    "test:admin-auth": "tsx src/scripts/testAdminAuth.ts"
+    "test:admin-auth": "tsx src/scripts/testAdminAuth.ts",
+    "test:participant-reg": "tsx src/scripts/testParticipantRegistration.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.6.0",

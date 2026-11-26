@@ -38,8 +38,12 @@ export class AppError extends Error {
     return new AppError(404, 'NOT_FOUND', message);
   }
 
-  static conflict(message: string, code = 'CONFLICT') {
-    return new AppError(409, code, message);
+  static conflict(
+    message: string,
+    code = 'CONFLICT',
+    details?: Record<string, string[]>,
+  ) {
+    return new AppError(409, code, message, details);
   }
 
   static tooManyRequests(

@@ -8,9 +8,14 @@ import {
 import {
   getAuthSession,
   loginAdminRequest,
+  loginParticipantRequest,
   logoutRequest,
+  registerParticipantRequest,
 } from '../services/authService.ts';
-import type { AuthUser } from '../types/domain.ts';
+import type {
+  AuthUser,
+  ParticipantRegistrationPayload,
+} from '../types/domain.ts';
 import { AuthContext, type AuthStatus } from './authContextValue.ts';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -67,6 +72,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return res.user;
   }, []);
 
+  const loginParticipant = useCallback(async (email: string, password: string) => {
+    const res = await loginParticipantRequest(email, password);
+    if (!res.authenticated || !res.user) {
+      throw new Error('Gagal memulai sesi peserta.');
+    }
+    setUser(res.user);
+    setStatus('authenticated');
+    return res.user;
+  }, []);
+
+  const registerParticipant = useCallback(
+    async (payload: ParticipantRegistrationPayload) => {
+      const res = await registerParticipantRequest(payload);
+      if (!res.authenticated || !res.user) {
+        throw new Error('Pendaftaran berhasil tetapi sesi belum aktif.');
+      }
+      setUser(res.user);
+      setStatus('authenticated');
+      return res;
+    },
+    [],
+  );
+
   const logout = useCallback(async () => {
     try {
       await logoutRequest();
@@ -86,11 +114,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       status,
       loginAdmin,
+      loginParticipant,
+      registerParticipant,
       logout,
       refreshSession,
       clearAuthenticatedUser,
     }),
-    [user, status, loginAdmin, logout, refreshSession, clearAuthenticatedUser],
+    [
+      user,
+      status,
+      loginAdmin,
+      loginParticipant,
+      registerParticipant,
+      logout,
+      refreshSession,
+      clearAuthenticatedUser,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

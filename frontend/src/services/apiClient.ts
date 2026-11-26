@@ -4,12 +4,19 @@ const API_BASE_URL =
 export class ApiError extends Error {
   readonly status: number;
   readonly code: string;
+  readonly details?: Record<string, string[]>;
 
-  constructor(status: number, code: string, message: string) {
+  constructor(
+    status: number,
+    code: string,
+    message: string,
+    details?: Record<string, string[]>,
+  ) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.code = code;
+    this.details = details;
   }
 }
 
@@ -57,7 +64,14 @@ export async function apiRequest<T>(
       payload && typeof payload.message === 'string'
         ? payload.message
         : 'Permintaan belum dapat diproses oleh server.';
-    throw new ApiError(response.status, errorCode, message);
+    const details =
+      payload &&
+      payload.details &&
+      typeof payload.details === 'object' &&
+      !Array.isArray(payload.details)
+        ? (payload.details as Record<string, string[]>)
+        : undefined;
+    throw new ApiError(response.status, errorCode, message, details);
   }
 
   return payload as T;

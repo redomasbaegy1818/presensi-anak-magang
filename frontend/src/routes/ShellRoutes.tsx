@@ -40,6 +40,7 @@ function getAdminPageTitle(pathname: string): string {
 export function ParticipantShellRoute() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
 
   const navItems: NavItem[] = PARTICIPANT_NAV_CONFIG.map((item) => ({
     ...item,
@@ -51,15 +52,26 @@ export function ParticipantShellRoute() {
         : pathname.startsWith(item.href),
   }));
 
+  const handleParticipantLogout = async () => {
+    await logout();
+    navigate('/masuk', {
+      replace: true,
+      state: { authNotice: 'logged_out' },
+    });
+  };
+
   return (
     <ParticipantLayout
       pageTitle={getParticipantPageTitle(pathname)}
+      participantName={user?.participant?.fullName || user?.email}
       navItems={navItems}
       onNavigate={(id) => {
         const target = PARTICIPANT_NAV_CONFIG.find((item) => item.id === id);
         if (target) navigate(target.href);
       }}
-      onLogout={() => navigate('/masuk')}
+      onLogout={() => {
+        void handleParticipantLogout();
+      }}
     >
       <Outlet />
     </ParticipantLayout>

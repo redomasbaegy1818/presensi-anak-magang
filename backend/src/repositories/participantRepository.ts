@@ -89,6 +89,37 @@ export async function findParticipantById(id: string) {
   });
 }
 
+export async function findParticipantByUserId(userId: string) {
+  return prisma.participant.findUnique({
+    where: { userId },
+    select: PUBLIC_PARTICIPANT_SELECT,
+  });
+}
+
+export async function findDuplicateParticipantConflicts(
+  email: string,
+  nimNis: string,
+): Promise<{ emailExists: boolean; nimNisExists: boolean }> {
+  const normalizedEmail = normalizeEmail(email);
+  const normalizedNimNis = normalizeNimNis(nimNis);
+
+  const [existingUser, existingParticipant] = await Promise.all([
+    prisma.user.findUnique({
+      where: { email: normalizedEmail },
+      select: { id: true },
+    }),
+    prisma.participant.findUnique({
+      where: { nimNis: normalizedNimNis },
+      select: { id: true },
+    }),
+  ]);
+
+  return {
+    emailExists: Boolean(existingUser),
+    nimNisExists: Boolean(existingParticipant),
+  };
+}
+
 export async function updateParticipantStatus(
   participantId: string,
   status: ParticipantStatus,

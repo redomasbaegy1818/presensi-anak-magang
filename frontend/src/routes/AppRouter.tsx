@@ -17,6 +17,7 @@ import NotFoundPage from '../pages/NotFoundPage.tsx';
 import ParticipantProfilePage from '../pages/ParticipantProfilePage.tsx';
 import RegisterPage from '../pages/RegisterPage.tsx';
 import { ProtectedAdminRoute } from './ProtectedAdminRoute.tsx';
+import { ProtectedParticipantRoute } from './ProtectedParticipantRoute.tsx';
 import { AdminShellRoute, ParticipantShellRoute } from './ShellRoutes.tsx';
 
 export function AppRouter() {
@@ -28,13 +29,15 @@ export function AppRouter() {
           <Route path="/masuk" element={<LoginPage />} />
           <Route path="/daftar" element={<RegisterPage />} />
 
-          <Route path="/peserta" element={<ParticipantShellRoute />}>
-            <Route index element={<Navigate to="/peserta/presensi" replace />} />
-            <Route path="daftar-wajah" element={<FaceRegistrationPage />} />
-            <Route path="presensi" element={<AttendancePage />} />
-            <Route path="hasil-presensi" element={<AttendanceResultPage />} />
-            <Route path="riwayat" element={<AttendanceHistoryPage />} />
-            <Route path="profil" element={<ParticipantProfilePage />} />
+          <Route element={<ProtectedParticipantRoute />}>
+            <Route path="/peserta" element={<ParticipantShellRoute />}>
+              <Route index element={<Navigate to="/peserta/presensi" replace />} />
+              <Route path="daftar-wajah" element={<FaceRegistrationPage />} />
+              <Route path="presensi" element={<AttendancePage />} />
+              <Route path="hasil-presensi" element={<AttendanceResultPage />} />
+              <Route path="riwayat" element={<AttendanceHistoryPage />} />
+              <Route path="profil" element={<ParticipantProfilePage />} />
+            </Route>
           </Route>
 
           <Route path="/admin/masuk" element={<AdminLoginPage />} />

@@ -1,11 +1,80 @@
-import { Link, useNavigate } from 'react-router-dom';
-import { Alert } from '../components/ui/index.ts';
-import { LoginForm } from '../forms/LoginForm.tsx';
+import { useState } from 'react';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Alert, LoadingState } from '../components/ui/index.ts';
+import { LoginForm, type LoginFormValues } from '../forms/LoginForm.tsx';
+import { useAuth } from '../hooks/useAuth.ts';
 import { usePageTitle } from '../hooks/usePageTitle.ts';
+import { ApiError } from '../services/apiClient.ts';
+
+type ParticipantLoginNotice = 'unauthorized' | 'logged_out';
+
+interface LoginLocationState {
+  authNotice?: ParticipantLoginNotice;
+  from?: string;
+}
 
 export default function LoginPage() {
   usePageTitle('Masuk Peserta');
   const navigate = useNavigate();
+  const location = useLocation();
+  const { user, status, loginParticipant } = useAuth();
+
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const locationState = (location.state as LoginLocationState | null) ?? null;
+
+  if (status === 'loading') {
+    return (
+      <div className="min-h-dvh bg-[var(--color-bg-page)] flex items-center justify-center px-4">
+        <div className="bg-white border border-[var(--color-border)] rounded-[var(--radius-md)] px-8 py-4">
+          <LoadingState label="Memeriksa sesi..." />
+        </div>
+      </div>
+    );
+  }
+
+  if (status === 'authenticated' && user) {
+    if (user.role === 'ADMIN') {
+      return <Navigate to="/admin/dashboard" replace />;
+    }
+    return (
+      <Navigate
+        to={
+          user.participant?.faceRegistered
+            ? '/peserta/presensi'
+            : '/peserta/daftar-wajah'
+        }
+        replace
+      />
+    );
+  }
+
+  const handleSubmit = async (values: LoginFormValues) => {
+    setErrorMessage(null);
+    setSubmitting(true);
+
+    try {
+      const loggedInUser = await loginParticipant(
+        values.identifier,
+        values.password,
+      );
+      const nextRoute = loggedInUser.participant?.faceRegistered
+        ? '/peserta/presensi'
+        : '/peserta/daftar-wajah';
+      navigate(nextRoute, { replace: true });
+    } catch (error) {
+      if (error instanceof ApiError) {
+        setErrorMessage(error.message);
+      } else {
+        setErrorMessage(
+          'Tidak dapat terhubung ke server. Periksa jaringan Anda lalu coba lagi.',
+        );
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div className="min-h-dvh bg-[var(--color-bg-page)] flex flex-col justify-center px-4 py-8">
@@ -26,17 +95,29 @@ export default function LoginPage() {
         </header>
 
         <main className="bg-white border border-[var(--color-border)] rounded-[var(--radius-lg)] p-5 sm:p-6 space-y-5">
+          {errorMessage ? (
+            <Alert tone="danger" title="Gagal Masuk">
+              {errorMessage}
+            </Alert>
+          ) : locationState?.authNotice === 'unauthorized' ? (
+            <Alert tone="warning" title="Akses Dibatasi">
+              Silakan masuk terlebih dahulu untuk membuka portal peserta.
+            </Alert>
+          ) : (
+            locationState?.authNotice === 'logged_out' && (
+              <Alert tone="success" title="Berhasil Keluar">
+                Anda telah keluar dari portal peserta.
+              </Alert>
+            )
+          )}
+
           <LoginForm
             identifierLabel="Email Peserta"
             identifierPlaceholder="nama@contoh.id"
             submitLabel="Masuk ke Portal Peserta"
-            onSubmit={() => navigate('/peserta/presensi')}
+            loading={submitting}
+            onSubmit={handleSubmit}
           />
-
-          <Alert tone="info" title="Tahap Struktur Aplikasi">
-            Autentikasi belum dihubungkan ke server. Mengirim formulir akan
-            mengarahkan ke struktur portal peserta.
-          </Alert>
 
           <div className="pt-3 border-t border-[var(--color-bg-subtle)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm">
             <Link

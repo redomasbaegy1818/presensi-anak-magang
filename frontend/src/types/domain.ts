@@ -1,11 +1,41 @@
 export type UserRole = 'ADMIN' | 'PARTICIPANT';
 
+export interface AuthParticipantSummary {
+  id: string;
+  fullName: string;
+  nimNis: string;
+  division: string;
+  status: ParticipantStatus;
+  faceRegistered: boolean;
+}
+
 export interface AuthUser {
   userId: string;
   email: string;
   username: string | null;
   role: UserRole;
   isActive: boolean;
+  participant: AuthParticipantSummary | null;
+}
+
+export interface ParticipantRegistrationPayload {
+  fullName: string;
+  nimNis: string;
+  universitySchool: string;
+  major: string;
+  division: string;
+  phone: string;
+  email: string;
+  internshipStartDate: string;
+  internshipEndDate: string;
+  password: string;
+}
+
+export interface ParticipantRegisterResponse {
+  authenticated: boolean;
+  user: AuthUser;
+  participant: ParticipantProfile;
+  message: string;
 }
 
 export interface SessionSummary {
