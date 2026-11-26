@@ -118,16 +118,11 @@ export default function FaceRegistrationPage() {
   };
 
   return (
-    <div className="space-y-4">
-      <Alert tone="info" title="Panduan Pendaftaran Wajah">
-        Posisikan wajah di dalam area kamera dengan pencahayaan merata, lepas
-        masker, dan pastikan hanya satu wajah yang terlihat.
-      </Alert>
-
+    <div className="space-y-3">
       {alreadyRegistered && flowState !== 'success' && (
-        <Alert tone="success" title="Wajah Sudah Terdaftar">
-          Data wajah Anda sudah terdaftar. Anda dapat langsung melakukan verifikasi
-          presensi atau memperbarui data wajah di bawah ini.
+        <Alert tone="info" title="Wajah Sudah Terdaftar">
+          Data wajah Anda sudah aktif. Anda dapat langsung melakukan presensi
+          atau memperbarui foto wajah di bawah ini.
         </Alert>
       )}
 
@@ -156,31 +151,24 @@ export default function FaceRegistrationPage() {
         }
       />
 
-      <div className="bg-white border border-[var(--color-border)] rounded-[var(--radius-md)] p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <p className="text-sm text-[var(--color-text-secondary)]">
-          {flowState === 'success' || alreadyRegistered
-            ? 'Data wajah siap digunakan untuk verifikasi identitas.'
-            : 'Selesaikan pendaftaran wajah terlebih dahulu sebelum melanjutkan ke presensi.'}
-        </p>
-        <div className="flex items-center gap-2">
-          <Link
-            to="/peserta/profil"
-            className="text-sm font-medium text-[var(--color-text-secondary)] hover:underline px-2"
-          >
-            Lihat Profil
-          </Link>
-          <Button
-            size="sm"
-            variant={
-              flowState === 'success' || alreadyRegistered
-                ? 'primary'
-                : 'secondary'
-            }
-            onClick={() => navigate('/peserta/presensi')}
-          >
-            Ke Halaman Presensi
-          </Button>
-        </div>
+      <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-sm">
+        <Link
+          to="/peserta/profil"
+          className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:underline"
+        >
+          Kembali ke Profil
+        </Link>
+        <Button
+          size="sm"
+          variant={
+            flowState === 'success' || alreadyRegistered
+              ? 'primary'
+              : 'secondary'
+          }
+          onClick={() => navigate('/peserta/presensi')}
+        >
+          Ke Halaman Presensi
+        </Button>
       </div>
     </div>
   );

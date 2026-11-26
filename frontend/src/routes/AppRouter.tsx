@@ -10,7 +10,6 @@ import AdminSettingsPage from '../pages/AdminSettingsPage.tsx';
 import AttendanceHistoryPage from '../pages/AttendanceHistoryPage.tsx';
 import AttendancePage from '../pages/AttendancePage.tsx';
 import AttendanceResultPage from '../pages/AttendanceResultPage.tsx';
-import DesignSystemPreview from '../pages/DesignSystemPreview.tsx';
 import FaceRegistrationPage from '../pages/FaceRegistrationPage.tsx';
 import LoginPage from '../pages/LoginPage.tsx';
 import NotFoundPage from '../pages/NotFoundPage.tsx';
@@ -53,7 +52,6 @@ export function AppRouter() {
             </Route>
           </Route>
 
-          <Route path="/design-system" element={<DesignSystemPreview />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </AuthProvider>

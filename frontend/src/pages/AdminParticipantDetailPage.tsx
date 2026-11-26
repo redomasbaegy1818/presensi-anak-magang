@@ -68,7 +68,11 @@ const HISTORY_COLUMNS: TableColumn<AttendanceRecordItem>[] = [
         >
           {formatAttendanceStatus(row.status)}
         </Badge>
-        {row.isCorrected && <Badge tone="accent">Dikoreksi</Badge>}
+        {row.isCorrected && (
+          <span className="text-xs text-[var(--color-text-muted)]">
+            (Koreksi)
+          </span>
+        )}
       </div>
     ),
   },

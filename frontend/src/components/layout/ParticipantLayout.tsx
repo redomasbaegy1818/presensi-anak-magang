@@ -37,7 +37,7 @@ export function ParticipantLayout({
               className="inline-block w-1.5 h-5 rounded-[2px] bg-[var(--color-accent)]"
             />
             <span className="text-sm font-semibold text-[var(--color-text-primary)] truncate">
-              Magang Presensi
+              Presensi Magang
             </span>
           </div>
 

@@ -158,11 +158,11 @@ export function CameraCaptureFrame({
   return (
     <section
       aria-label="Area Kamera Wajah"
-      className="bg-white border border-[var(--color-border)] rounded-[var(--radius-lg)] p-4 sm:p-5 space-y-4"
+      className="bg-white border border-[var(--color-border)] rounded-[var(--radius-lg)] p-3 sm:p-4 space-y-3"
     >
       <div
         className={[
-          'relative aspect-[4/3] w-full overflow-hidden rounded-[var(--radius-md)] border-2 bg-slate-900 flex items-center justify-center',
+          'relative aspect-[4/3] w-full overflow-hidden rounded-[var(--radius-md)] border bg-slate-900 flex items-center justify-center',
           meta.frameBorderClass,
         ].join(' ')}
       >
@@ -190,52 +190,16 @@ export function CameraCaptureFrame({
             className="pointer-events-none absolute inset-6 sm:inset-10 flex items-center justify-center"
           >
             <div className="relative w-44 h-56 sm:w-52 sm:h-64">
-              <span className="absolute top-0 left-0 w-5 h-5 border-t-2 border-l-2 border-white/85" />
-              <span className="absolute top-0 right-0 w-5 h-5 border-t-2 border-r-2 border-white/85" />
-              <span className="absolute bottom-0 left-0 w-5 h-5 border-b-2 border-l-2 border-white/85" />
-              <span className="absolute bottom-0 right-0 w-5 h-5 border-b-2 border-r-2 border-white/85" />
+              <span className="absolute top-0 left-0 w-5 h-5 border-t-2 border-l-2 border-white/80" />
+              <span className="absolute top-0 right-0 w-5 h-5 border-t-2 border-r-2 border-white/80" />
+              <span className="absolute bottom-0 left-0 w-5 h-5 border-b-2 border-l-2 border-white/80" />
+              <span className="absolute bottom-0 right-0 w-5 h-5 border-b-2 border-r-2 border-white/80" />
             </div>
           </div>
         )}
-
-        <div className="absolute top-3 left-3">
-          <span className="inline-block rounded-[var(--radius-sm)] bg-slate-950/75 px-2.5 py-1 text-xs font-medium text-white">
-            {meta.badge}
-          </span>
-        </div>
       </div>
 
-      {/* Status panel */}
-      <div
-        role={
-          state === 'failed' ||
-          state === 'unavailable' ||
-          state === 'no_face' ||
-          state === 'multiple_faces' ||
-          state === 'low_quality'
-            ? 'alert'
-            : meta.busy
-              ? undefined
-              : 'status'
-        }
-        className={[
-          'rounded-[var(--radius-md)] border px-3.5 py-3 text-sm space-y-1.5',
-          meta.toneClass,
-        ].join(' ')}
-      >
-        <div className="flex items-center justify-between gap-2">
-          <p className="font-semibold">{displayTitle}</p>
-          {meta.busy && (
-            <progress
-              aria-label={displayTitle}
-              className="w-20 h-1.5 rounded overflow-hidden accent-[var(--color-accent)]"
-            />
-          )}
-        </div>
-        <p className="text-[var(--color-text-secondary)]">{displayMessage}</p>
-      </div>
-
-      {/* Primary Action Area */}
+      {/* Primary Action Area right below preview for fast mobile ergonomics */}
       <div className="flex flex-col sm:flex-row gap-2.5">
         {state === 'permission' && (
           <Button size="lg" fullWidth onClick={onRequestPermission}>
@@ -277,6 +241,43 @@ export function CameraCaptureFrame({
           </Button>
         )}
       </div>
+
+      {state === 'ready' ? (
+        <p className="text-xs text-[var(--color-text-secondary)] text-center">
+          {displayMessage}
+        </p>
+      ) : (
+        <div
+          role={
+            state === 'failed' ||
+            state === 'unavailable' ||
+            state === 'no_face' ||
+            state === 'multiple_faces' ||
+            state === 'low_quality'
+              ? 'alert'
+              : meta.busy
+                ? undefined
+                : 'status'
+          }
+          className={[
+            'rounded-[var(--radius-md)] border px-3.5 py-2.5 text-sm space-y-1',
+            meta.toneClass,
+          ].join(' ')}
+        >
+          <div className="flex items-center justify-between gap-2">
+            <p className="font-semibold">{displayTitle}</p>
+            {meta.busy && (
+              <progress
+                aria-label={displayTitle}
+                className="w-20 h-1.5 rounded overflow-hidden accent-[var(--color-accent)]"
+              />
+            )}
+          </div>
+          <p className="text-xs text-[var(--color-text-secondary)]">
+            {displayMessage}
+          </p>
+        </div>
+      )}
 
       <p className="text-xs text-[var(--color-text-muted)] text-center">
         {footerNote}

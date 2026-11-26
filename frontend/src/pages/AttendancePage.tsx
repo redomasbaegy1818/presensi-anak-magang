@@ -130,27 +130,20 @@ export default function AttendancePage() {
 
   if (!today.faceRegistered) {
     return (
-      <div className="space-y-4">
-        <Alert tone="warning" title="Pendaftaran Wajah Diperlukan">
-          Presensi belum diaktifkan karena data wajah Anda belum didaftarkan.
-          Selesaikan pendaftaran wajah terlebih dahulu agar sistem dapat memverifikasi identitas Anda.
-        </Alert>
-
-        <div className="bg-white border border-[var(--color-border)] rounded-[var(--radius-md)] p-5">
-          <EmptyState
-            title="Data wajah belum terdaftar"
-            description="Lanjutkan ke pendaftaran wajah untuk mengaktifkan presensi harian."
-            action={
-              <Button
-                size="lg"
-                onClick={() => navigate('/peserta/daftar-wajah')}
-              >
-                Lanjutkan ke Pendaftaran Wajah
-              </Button>
-            }
-          />
-        </div>
-      </div>
+      <section className="bg-white border border-[var(--color-border)] rounded-[var(--radius-md)] p-5">
+        <EmptyState
+          title="Pendaftaran wajah diperlukan"
+          description="Presensi belum diaktifkan karena data wajah Anda belum didaftarkan."
+          action={
+            <Button
+              size="lg"
+              onClick={() => navigate('/peserta/daftar-wajah')}
+            >
+              Lanjutkan ke Pendaftaran Wajah
+            </Button>
+          }
+        />
+      </section>
     );
   }
 
@@ -203,9 +196,7 @@ export default function AttendancePage() {
   }
 
   const isCheckIn = today.nextAction === 'CHECK_IN';
-  const actionLabel = isCheckIn
-    ? 'Presensi Masuk (Check-in)'
-    : 'Presensi Pulang (Check-out)';
+  const actionLabel = isCheckIn ? 'Presensi Masuk' : 'Presensi Pulang';
 
   const uiState: CameraUiState = (() => {
     if (webcamStatus === 'permission') return 'permission';
@@ -313,13 +304,10 @@ export default function AttendancePage() {
             {today.rules.lateToleranceMinutes} menit) · Pulang{' '}
             {today.rules.workEndTime} WIB
           </p>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between gap-2">
             <span className="text-sm font-semibold text-[var(--color-text-primary)]">
               {actionLabel}
             </span>
-            <Badge tone={isCheckIn ? 'neutral' : 'accent'}>
-              {isCheckIn ? 'Belum Masuk' : 'Sudah Masuk'}
-            </Badge>
           </div>
           {today.todayRecord?.checkInAt && (
             <p className="text-xs text-[var(--color-text-secondary)] tabular-nums">

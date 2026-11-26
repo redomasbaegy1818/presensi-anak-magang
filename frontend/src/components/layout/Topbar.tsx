@@ -45,8 +45,11 @@ export function Topbar({
             </svg>
           </button>
         )}
-        <p className="text-base font-semibold text-[var(--color-text-primary)] truncate">
+        <p className="lg:hidden text-base font-semibold text-[var(--color-text-primary)] truncate">
           {title}
+        </p>
+        <p className="hidden lg:block text-xs font-medium text-[var(--color-text-muted)] truncate">
+          Portal Admin · {title}
         </p>
       </div>
 

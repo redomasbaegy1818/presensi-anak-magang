@@ -18,7 +18,7 @@ export interface SidebarProps {
 }
 
 export function Sidebar({
-  brandTitle = 'Magang Presensi',
+  brandTitle = 'Presensi Magang',
   brandSubtitle = 'Surakarta',
   items,
   onNavigate,

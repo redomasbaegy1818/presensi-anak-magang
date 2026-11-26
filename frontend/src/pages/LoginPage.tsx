@@ -86,7 +86,7 @@ export default function LoginPage() {
               className="inline-block w-1.5 h-6 rounded-[2px] bg-[var(--color-accent)]"
             />
             <h1 className="text-xl font-semibold text-[var(--color-text-primary)]">
-              Magang Presensi
+              Presensi Magang
             </h1>
           </div>
           <p className="text-sm text-[var(--color-text-secondary)]">
