@@ -5,7 +5,7 @@ class Settings(BaseSettings):
     face_service_host: str = "127.0.0.1"
     face_service_port: int = 8001
     face_service_token: str = ""
-    scrfd_model_path: str = "./models/det_2.5g.onnx"
+    scrfd_model_path: str = "./models/det_500m.onnx"
     recognition_model_path: str = "./models/w600k_mbf.onnx"
 
     model_config = SettingsConfigDict(

@@ -3,6 +3,7 @@ import { Button } from '../ui/Button.tsx';
 
 export type CameraUiState =
   | 'permission'
+  | 'unavailable'
   | 'loading'
   | 'ready'
   | 'detecting'
@@ -10,12 +11,14 @@ export type CameraUiState =
   | 'success'
   | 'failed'
   | 'no_face'
-  | 'multiple_faces';
+  | 'multiple_faces'
+  | 'low_quality';
 
 export interface CameraCaptureFrameProps {
   state: CameraUiState;
   statusTitle?: string;
   statusMessage?: string;
+  captureLabel?: string;
   onRequestPermission?: () => void;
   onCapture?: () => void;
   onRetry?: () => void;
@@ -42,6 +45,15 @@ const STATE_META: Record<CameraUiState, StateMeta> = {
       'bg-[var(--color-bg-subtle)] border-[var(--color-border)] text-[var(--color-text-primary)]',
     frameBorderClass: 'border-[var(--color-border-strong)]',
   },
+  unavailable: {
+    badge: 'Kamera Tidak Tersedia',
+    title: 'Kamera tidak dapat diakses',
+    message:
+      'Pastikan perangkat memiliki kamera aktif, izin kamera diizinkan, dan tidak sedang digunakan aplikasi lain.',
+    toneClass:
+      'bg-[var(--color-danger-bg)] border-[var(--color-danger-border)] text-slate-900',
+    frameBorderClass: 'border-[var(--color-danger)]',
+  },
   loading: {
     badge: 'Menyiapkan',
     title: 'Menyalakan kamera...',
@@ -55,14 +67,14 @@ const STATE_META: Record<CameraUiState, StateMeta> = {
     badge: 'Siap',
     title: 'Kamera siap digunakan',
     message:
-      'Posisikan wajah menghadap lurus ke kamera dengan pencahayaan yang cukup.',
+      'Posisikan wajah di dalam area kamera dengan pencahayaan yang cukup.',
     toneClass:
       'bg-white border-[var(--color-border)] text-[var(--color-text-primary)]',
     frameBorderClass: 'border-slate-300',
   },
   detecting: {
     badge: 'Mendeteksi',
-    title: 'Mendeteksi posisi wajah...',
+    title: 'Memeriksa posisi wajah...',
     message: 'Tahan posisi sejenak dan pastikan wajah berada di dalam bingkai.',
     toneClass:
       'bg-[var(--color-info-bg)] border-[var(--color-info-border)] text-slate-900',
@@ -79,27 +91,27 @@ const STATE_META: Record<CameraUiState, StateMeta> = {
     busy: true,
   },
   success: {
-    badge: 'Berhasil',
-    title: 'Verifikasi wajah berhasil',
-    message: 'Wajah berhasil dikenali dan dicatat oleh sistem.',
+    badge: 'Wajah Terdeteksi',
+    title: 'Wajah terdeteksi dengan jelas',
+    message: 'Posisi dan kualitas wajah memenuhi syarat.',
     toneClass:
       'bg-[var(--color-success-bg)] border-[var(--color-success-border)] text-slate-900',
     frameBorderClass: 'border-[var(--color-success)]',
   },
   failed: {
     badge: 'Gagal',
-    title: 'Verifikasi wajah gagal',
+    title: 'Pemeriksaan belum berhasil',
     message:
-      'Wajah belum dapat diverifikasi atau kamera bermasalah. Silakan coba lagi.',
+      'Terjadi kendala saat memproses gambar kamera. Silakan coba lagi.',
     toneClass:
       'bg-[var(--color-danger-bg)] border-[var(--color-danger-border)] text-slate-900',
     frameBorderClass: 'border-[var(--color-danger)]',
   },
   no_face: {
     badge: 'Tidak Ada Wajah',
-    title: 'Wajah tidak terdeteksi',
+    title: 'Wajah belum terdeteksi',
     message:
-      'Pastikan wajah terlihat jelas, tidak tertutup masker/tangan, dan menghadap kamera.',
+      'Posisikan wajah di dalam area kamera dan pastikan tidak tertutup masker atau tangan.',
     toneClass:
       'bg-[var(--color-warning-bg)] border-[var(--color-warning-border)] text-slate-900',
     frameBorderClass: 'border-[var(--color-warning)]',
@@ -108,7 +120,16 @@ const STATE_META: Record<CameraUiState, StateMeta> = {
     badge: 'Lebih Dari Satu Wajah',
     title: 'Terdeteksi beberapa wajah',
     message:
-      'Pastikan hanya ada satu orang di depan kamera sebelum melakukan pengambilan gambar.',
+      'Pastikan hanya satu wajah yang terlihat di depan kamera.',
+    toneClass:
+      'bg-[var(--color-warning-bg)] border-[var(--color-warning-border)] text-slate-900',
+    frameBorderClass: 'border-[var(--color-warning)]',
+  },
+  low_quality: {
+    badge: 'Kualitas Kurang',
+    title: 'Gambar wajah belum cukup jelas',
+    message:
+      'Pastikan pencahayaan merata, posisi wajah tidak terlalu jauh, dan gambar tidak buram.',
     toneClass:
       'bg-[var(--color-warning-bg)] border-[var(--color-warning-border)] text-slate-900',
     frameBorderClass: 'border-[var(--color-warning)]',
@@ -116,14 +137,14 @@ const STATE_META: Record<CameraUiState, StateMeta> = {
 };
 
 /**
- * Reusable Camera UI foundation covering all 9 visual states required for
- * face registration and attendance. SCRFD and verification logic are injected
- * in later phases via callbacks and previewSlot.
+ * Reusable Camera UI foundation covering camera permission, readiness,
+ * SCRFD face detection, quality feedback, and verification states.
  */
 export function CameraCaptureFrame({
   state,
   statusTitle,
   statusMessage,
+  captureLabel = 'Ambil Gambar Wajah',
   onRequestPermission,
   onCapture,
   onRetry,
@@ -162,7 +183,8 @@ export function CameraCaptureFrame({
         {(state === 'ready' ||
           state === 'detecting' ||
           state === 'no_face' ||
-          state === 'multiple_faces') && (
+          state === 'multiple_faces' ||
+          state === 'low_quality') && (
           <div
             aria-hidden="true"
             className="pointer-events-none absolute inset-6 sm:inset-10 flex items-center justify-center"
@@ -186,7 +208,11 @@ export function CameraCaptureFrame({
       {/* Status panel */}
       <div
         role={
-          state === 'failed' || state === 'no_face' || state === 'multiple_faces'
+          state === 'failed' ||
+          state === 'unavailable' ||
+          state === 'no_face' ||
+          state === 'multiple_faces' ||
+          state === 'low_quality'
             ? 'alert'
             : meta.busy
               ? undefined
@@ -209,7 +235,7 @@ export function CameraCaptureFrame({
         <p className="text-[var(--color-text-secondary)]">{displayMessage}</p>
       </div>
 
-      {/* Primary Action Area (mobile-friendly full-width lg buttons) */}
+      {/* Primary Action Area */}
       <div className="flex flex-col sm:flex-row gap-2.5">
         {state === 'permission' && (
           <Button size="lg" fullWidth onClick={onRequestPermission}>
@@ -217,16 +243,18 @@ export function CameraCaptureFrame({
           </Button>
         )}
 
+        {state === 'unavailable' && (
+          <Button size="lg" fullWidth onClick={onRequestPermission ?? onRetry}>
+            Coba Aktifkan Kamera Lagi
+          </Button>
+        )}
+
         {(state === 'ready' ||
           state === 'no_face' ||
-          state === 'multiple_faces') && (
-          <Button
-            size="lg"
-            fullWidth
-            onClick={onCapture}
-            disabled={state === 'multiple_faces'}
-          >
-            Ambil Gambar Wajah
+          state === 'multiple_faces' ||
+          state === 'low_quality') && (
+          <Button size="lg" fullWidth onClick={onCapture}>
+            {captureLabel}
           </Button>
         )}
 
@@ -245,7 +273,7 @@ export function CameraCaptureFrame({
             fullWidth
             onClick={onRetry}
           >
-            {state === 'failed' ? 'Coba Lagi' : 'Ulangi Pengambilan'}
+            {state === 'failed' ? 'Coba Lagi' : 'Ulangi Pemeriksaan'}
           </Button>
         )}
       </div>

@@ -111,3 +111,35 @@ export interface ApiHealthStatus {
   faceService: 'connected' | 'unreachable';
   timestamp: string;
 }
+
+export type FaceDetectionStatus =
+  | 'face_detected'
+  | 'no_face'
+  | 'multiple_faces'
+  | 'low_quality';
+
+export type FaceDetectionReason =
+  | 'ok'
+  | 'no_face'
+  | 'multiple_faces'
+  | 'low_confidence'
+  | 'face_too_small'
+  | 'face_too_close'
+  | 'partial_face'
+  | 'poor_lighting'
+  | 'blurry_image';
+
+export interface FaceBoundingBox {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface FaceDetectionResult {
+  status: FaceDetectionStatus;
+  reason: FaceDetectionReason;
+  faceCount: number;
+  bbox: FaceBoundingBox | null;
+  message: string;
+}

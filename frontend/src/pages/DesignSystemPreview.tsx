@@ -58,14 +58,16 @@ const SAMPLE_ROWS: TokenSampleRow[] = [
 
 const CAMERA_STATES: { value: CameraUiState; label: string }[] = [
   { value: 'permission', label: '1. Izin Kamera' },
-  { value: 'loading', label: '2. Memuat Kamera' },
-  { value: 'ready', label: '3. Kamera Siap' },
-  { value: 'detecting', label: '4. Mendeteksi Wajah' },
-  { value: 'verifying', label: '5. Memverifikasi' },
-  { value: 'success', label: '6. Berhasil' },
-  { value: 'failed', label: '7. Gagal' },
-  { value: 'no_face', label: '8. Tidak Ada Wajah' },
-  { value: 'multiple_faces', label: '9. Banyak Wajah' },
+  { value: 'unavailable', label: '2. Kamera Tidak Tersedia' },
+  { value: 'loading', label: '3. Memuat Kamera' },
+  { value: 'ready', label: '4. Kamera Siap' },
+  { value: 'detecting', label: '5. Mendeteksi Wajah' },
+  { value: 'verifying', label: '6. Memverifikasi' },
+  { value: 'success', label: '7. Berhasil' },
+  { value: 'failed', label: '8. Gagal' },
+  { value: 'no_face', label: '9. Tidak Ada Wajah' },
+  { value: 'multiple_faces', label: '10. Banyak Wajah' },
+  { value: 'low_quality', label: '11. Kualitas Kurang' },
 ];
 
 export default function DesignSystemPreview() {

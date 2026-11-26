@@ -21,3 +21,11 @@ export const authRateLimiter = rateLimit({
   legacyHeaders: false,
   message: RATE_LIMIT_BODY,
 });
+
+export const faceRateLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  limit: 60,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: RATE_LIMIT_BODY,
+});
