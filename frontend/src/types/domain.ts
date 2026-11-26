@@ -169,3 +169,48 @@ export interface FaceVerificationResult {
   bbox: FaceBoundingBox | null;
   message: string;
 }
+
+export interface TodayAttendanceRecord {
+  id: string;
+  participantName: string;
+  attendanceDate: string;
+  checkInAt: string | null;
+  checkOutAt: string | null;
+  status: AttendanceStatus;
+  isCorrected: boolean;
+}
+
+export interface TodayAttendanceSummary {
+  attendanceDate: string;
+  nextAction: AttendanceActionType | 'COMPLETED';
+  faceRegistered: boolean;
+  participantActive: boolean;
+  withinInternshipPeriod: boolean;
+  rules: {
+    checkInStartTime: string;
+    workStartTime: string;
+    lateToleranceMinutes: number;
+    workEndTime: string;
+    checkOutEndTime: string;
+  };
+  todayRecord: TodayAttendanceRecord | null;
+}
+
+export interface AttendanceConfirmationData {
+  id: string;
+  participantName: string;
+  attendanceType: AttendanceActionType;
+  attendanceDate: string;
+  recordedAt: string;
+  checkInAt: string | null;
+  checkOutAt: string | null;
+  status: AttendanceStatus;
+  confirmationMessage: string;
+}
+
+export interface AttendanceMarkResponse {
+  recorded: boolean;
+  verificationStatus: FaceVerificationState;
+  message: string;
+  attendance?: AttendanceConfirmationData;
+}
