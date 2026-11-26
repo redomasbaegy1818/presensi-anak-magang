@@ -1,5 +1,10 @@
-import 'dotenv/config';
+import { fileURLToPath } from 'node:url';
+import dotenv from 'dotenv';
 import { z } from 'zod';
+
+dotenv.config({
+  path: fileURLToPath(new URL('../../.env', import.meta.url)),
+});
 
 const PLACEHOLDER_MARKERS = ['CHANGE_ME', 'REPLACE_WITH'];
 

@@ -30,6 +30,14 @@ interface InternalFaceDetectResponse {
   reason: FaceDetectionReason;
   faceCount: number;
   bbox: NormalizedFaceBox | null;
+  confidence?: number | null;
+}
+
+interface InternalFaceExtractResponse extends InternalFaceDetectResponse {
+  detectorName: string;
+  modelName: string;
+  embeddingDim: number | null;
+  embedding: number[] | null;
 }
 
 export interface PublicFaceDetectResult {
@@ -38,6 +46,14 @@ export interface PublicFaceDetectResult {
   faceCount: number;
   bbox: NormalizedFaceBox | null;
   message: string;
+}
+
+export interface InternalFaceExtractResult extends PublicFaceDetectResult {
+  confidence: number | null;
+  detectorName: string;
+  modelName: string;
+  embeddingDim: number | null;
+  embedding: number[] | null;
 }
 
 const INDONESIAN_REASON_MESSAGES: Record<FaceDetectionReason, string> = {
@@ -56,11 +72,12 @@ const INDONESIAN_REASON_MESSAGES: Record<FaceDetectionReason, string> = {
     'Gambar tampak buram. Tahan posisi sejenak lalu ambil gambar kembali.',
 };
 
-export async function detectFaceViaService(
+async function postImageToFaceService<T>(
+  endpointPath: string,
   imageBuffer: Buffer,
   mimeType: string,
   filename: string,
-): Promise<PublicFaceDetectResult> {
+): Promise<T> {
   const form = new FormData();
   const blob = new Blob([new Uint8Array(imageBuffer)], { type: mimeType });
   form.append('image', blob, filename || 'frame.jpg');
@@ -69,7 +86,7 @@ export async function detectFaceViaService(
   const timeout = setTimeout(() => controller.abort(), 8000);
 
   try {
-    const response = await fetch(`${env.FACE_SERVICE_URL}/internal/v1/face/detect`, {
+    const response = await fetch(`${env.FACE_SERVICE_URL}${endpointPath}`, {
       method: 'POST',
       headers: env.FACE_SERVICE_TOKEN
         ? { 'X-Service-Token': env.FACE_SERVICE_TOKEN }
@@ -92,18 +109,7 @@ export async function detectFaceViaService(
       );
     }
 
-    const data = (await response.json()) as InternalFaceDetectResponse;
-    const message =
-      INDONESIAN_REASON_MESSAGES[data.reason] ??
-      'Pemeriksaan posisi wajah selesai.';
-
-    return {
-      status: data.status,
-      reason: data.reason,
-      faceCount: data.faceCount,
-      bbox: data.bbox,
-      message,
-    };
+    return (await response.json()) as T;
   } catch (error) {
     if (error instanceof AppError) {
       throw error;
@@ -116,4 +122,55 @@ export async function detectFaceViaService(
   } finally {
     clearTimeout(timeout);
   }
+}
+
+export async function detectFaceViaService(
+  imageBuffer: Buffer,
+  mimeType: string,
+  filename: string,
+): Promise<PublicFaceDetectResult> {
+  const data = await postImageToFaceService<InternalFaceDetectResponse>(
+    '/internal/v1/face/detect',
+    imageBuffer,
+    mimeType,
+    filename,
+  );
+
+  return {
+    status: data.status,
+    reason: data.reason,
+    faceCount: data.faceCount,
+    bbox: data.bbox,
+    message:
+      INDONESIAN_REASON_MESSAGES[data.reason] ??
+      'Pemeriksaan posisi wajah selesai.',
+  };
+}
+
+export async function extractFaceEmbeddingViaService(
+  imageBuffer: Buffer,
+  mimeType: string,
+  filename: string,
+): Promise<InternalFaceExtractResult> {
+  const data = await postImageToFaceService<InternalFaceExtractResponse>(
+    '/internal/v1/face/extract',
+    imageBuffer,
+    mimeType,
+    filename,
+  );
+
+  return {
+    status: data.status,
+    reason: data.reason,
+    faceCount: data.faceCount,
+    bbox: data.bbox,
+    confidence: data.confidence ?? null,
+    detectorName: data.detectorName,
+    modelName: data.modelName,
+    embeddingDim: data.embeddingDim,
+    embedding: data.embedding,
+    message:
+      INDONESIAN_REASON_MESSAGES[data.reason] ??
+      'Pemrosesan wajah selesai.',
+  };
 }
