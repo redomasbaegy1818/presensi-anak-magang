@@ -1,5 +1,5 @@
-import DesignSystemPreview from './pages/DesignSystemPreview.tsx';
+import { AppRouter } from './routes/AppRouter.tsx';
 
 export default function App() {
-  return <DesignSystemPreview />;
+  return <AppRouter />;
 }

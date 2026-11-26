@@ -43,7 +43,7 @@ export function ParticipantLayout({
 
           <div className="flex items-center gap-2.5 shrink-0">
             {participantName && (
-              <span className="hidden xs:inline text-xs font-medium text-[var(--color-text-secondary)] truncate max-w-36">
+              <span className="hidden sm:inline text-xs font-medium text-[var(--color-text-secondary)] truncate max-w-36">
                 {participantName}
               </span>
             )}
