@@ -98,6 +98,17 @@ export function useWebcam() {
   }, [stopCamera]);
 
   useEffect(() => {
+    const video = videoRef.current;
+    const stream = streamRef.current;
+    if (webcamStatus === 'ready' && video && stream) {
+      if (video.srcObject !== stream) {
+        video.srcObject = stream;
+      }
+      void video.play().catch(() => undefined);
+    }
+  }, [webcamStatus]);
+
+  useEffect(() => {
     return () => {
       stopCamera();
     };

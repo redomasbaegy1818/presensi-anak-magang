@@ -15,25 +15,14 @@ export function WebcamPreview({
   detectedBox,
   boxTone = 'success',
 }: WebcamPreviewProps) {
-  if (webcamStatus !== 'ready') {
-    return (
-      <video
-        ref={videoRef}
-        autoPlay
-        muted
-        playsInline
-        className="hidden"
-      />
-    );
-  }
-
+  const isReady = webcamStatus === 'ready';
   const boxBorderClass =
     boxTone === 'success'
       ? 'border-[var(--color-success)]'
       : 'border-[var(--color-danger)]';
 
   return (
-    <div className="relative w-full h-full">
+    <div className={isReady ? 'relative w-full h-full' : 'hidden'}>
       <video
         ref={videoRef}
         autoPlay
@@ -41,7 +30,7 @@ export function WebcamPreview({
         playsInline
         className="w-full h-full object-cover -scale-x-100"
       />
-      {detectedBox && (
+      {isReady && detectedBox && (
         <div
           aria-hidden="true"
           style={{
