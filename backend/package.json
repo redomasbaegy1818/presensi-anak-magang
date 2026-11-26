@@ -22,7 +22,8 @@
     "test:admin-attendance": "tsx src/scripts/testAdminAttendance.ts",
     "test:admin-reports": "tsx src/scripts/testAdminReports.ts",
     "test:admin-settings": "tsx src/scripts/testAdminSettings.ts",
-    "test:security": "tsx src/scripts/testSecurityAudit.ts"
+    "test:security": "tsx src/scripts/testSecurityAudit.ts",
+    "test:qa-network": "tsx src/scripts/testQaNetworkAndEdge.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.6.0",

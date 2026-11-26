@@ -1,7 +1,10 @@
+import { Prisma } from '@prisma/client';
 import type { NextFunction, Request, Response } from 'express';
 import { ZodError } from 'zod';
 import { env } from '../config/env.js';
 import { AppError } from '../utils/appError.js';
+
+const PRISMA_UNAVAILABLE_CODES = new Set(['P1001', 'P1002', 'P1008', 'P1017']);
 
 export function notFoundHandler(_req: Request, res: Response): void {
   res.status(404).json({
@@ -42,6 +45,19 @@ export function errorHandler(
     res.status(400).json({
       error: 'INVALID_JSON',
       message: 'Format JSON pada permintaan tidak valid.',
+    });
+    return;
+  }
+
+  if (
+    err instanceof Prisma.PrismaClientInitializationError ||
+    (err instanceof Prisma.PrismaClientKnownRequestError &&
+      PRISMA_UNAVAILABLE_CODES.has(err.code))
+  ) {
+    res.status(503).json({
+      error: 'DATABASE_UNAVAILABLE',
+      message:
+        'Layanan basis data sedang tidak tersedia. Silakan coba beberapa saat lagi.',
     });
     return;
   }

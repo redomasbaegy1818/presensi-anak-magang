@@ -1,6 +1,7 @@
-import type { ParticipantStatus, UserRole } from '@prisma/client';
+import { Prisma, type ParticipantStatus, type UserRole } from '@prisma/client';
 import { env } from '../config/env.js';
 import { prisma } from '../lib/prisma.js';
+import { AppError } from '../utils/appError.js';
 import { hashSessionToken } from '../utils/crypto.js';
 
 export type { UserRole };
@@ -96,7 +97,18 @@ export async function resolveSessionByToken(
           }
         : null,
     };
-  } catch {
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientInitializationError ||
+      (error instanceof Prisma.PrismaClientKnownRequestError &&
+        ['P1001', 'P1002', 'P1008', 'P1017'].includes(error.code))
+    ) {
+      throw new AppError(
+        503,
+        'DATABASE_UNAVAILABLE',
+        'Layanan basis data sedang tidak tersedia. Silakan coba beberapa saat lagi.',
+      );
+    }
     return null;
   }
 }
