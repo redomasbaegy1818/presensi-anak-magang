@@ -1,6 +1,12 @@
 import type { Request, Response } from 'express';
 import { findParticipantByUserId } from '../repositories/participantRepository.js';
 import {
+  getParticipantAttendanceHistory,
+  getParticipantTodayAttendance,
+  markParticipantAttendance,
+  type AttendanceActionType,
+} from '../services/attendanceService.js';
+import {
   registerParticipantFace,
   verifyParticipantFace,
 } from '../services/faceVerificationService.js';
@@ -78,4 +84,56 @@ export async function handleVerifyParticipantFace(
   );
 
   res.status(200).json(outcome);
+}
+
+export async function handleGetTodayAttendance(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  if (!req.authUser?.participant) {
+    throw AppError.forbidden('Akun peserta tidak ditemukan.');
+  }
+
+  const summary = await getParticipantTodayAttendance(req.authUser.participant.id);
+  res.status(200).json(summary);
+}
+
+export async function handleMarkAttendance(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  if (!req.authUser?.participant) {
+    throw AppError.forbidden('Akun peserta tidak ditemukan.');
+  }
+  if (!req.file) {
+    throw AppError.badRequest('Gambar wajah wajib dikirimkan.', 'IMAGE_REQUIRED');
+  }
+
+  const requestedType = (req.body as { type?: AttendanceActionType }).type;
+  const result = await markParticipantAttendance(
+    req.authUser.participant.id,
+    req.file.buffer,
+    req.file.mimetype,
+    req.file.originalname,
+    { requestedType },
+  );
+
+  res.status(result.recorded ? 201 : 200).json(result);
+}
+
+export async function handleGetAttendanceHistory(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  if (!req.authUser?.participant) {
+    throw AppError.forbidden('Akun peserta tidak ditemukan.');
+  }
+
+  const month = (req.query as { month?: string }).month;
+  const records = await getParticipantAttendanceHistory(
+    req.authUser.participant.id,
+    month,
+  );
+
+  res.status(200).json({ records });
 }

@@ -3,7 +3,7 @@ import { prisma } from '../lib/prisma.js';
 export const DEFAULT_ATTENDANCE_SETTING = {
   checkInStartTime: '06:00',
   workStartTime: '08:00',
-  lateToleranceMinutes: 15,
+  lateToleranceMinutes: 10,
   workEndTime: '17:00',
   checkOutEndTime: '21:00',
   faceMatchThreshold: 0.5,
