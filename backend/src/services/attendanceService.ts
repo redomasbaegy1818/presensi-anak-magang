@@ -1,4 +1,9 @@
-import { Prisma, type AttendanceStatus } from '@prisma/client';
+import {
+  Prisma,
+  type AttendanceStatus,
+  type PermissionStatus,
+  type PermissionType,
+} from '@prisma/client';
 import { env } from '../config/env.js';
 import {
   createCheckInAttendance,
@@ -7,6 +12,7 @@ import {
   recordCheckOutAttendance,
 } from '../repositories/attendanceRepository.js';
 import { findParticipantById } from '../repositories/participantRepository.js';
+import { findPermissionCoveringDate } from '../repositories/permissionRepository.js';
 import { getOrCreateAttendanceSetting } from '../repositories/settingsRepository.js';
 import { AppError } from '../utils/appError.js';
 import { getWibDateTimeParts } from '../utils/dateWib.js';
@@ -45,6 +51,15 @@ export interface TodayAttendanceSummary {
   withinInternshipPeriod: boolean;
   rules: PublicAttendanceRules;
   todayRecord: PublicAttendanceSummaryItem | null;
+  todayPermission: {
+    id: string;
+    type: PermissionType;
+    status: PermissionStatus;
+    reason: string;
+    adminNote: string | null;
+    startDate: string;
+    endDate: string;
+  } | null;
 }
 
 export interface AttendanceMarkResult {
@@ -83,10 +98,10 @@ export async function getParticipantTodayAttendance(
   const endStr = toDateOnlyString(participant.internshipEndDate);
   const withinInternshipPeriod = wib.dateStr >= startStr && wib.dateStr <= endStr;
 
-  const existing = await findParticipantAttendanceByDate(
-    participant.id,
-    wib.attendanceDate,
-  );
+  const [existing, todayPermission] = await Promise.all([
+    findParticipantAttendanceByDate(participant.id, wib.attendanceDate),
+    findPermissionCoveringDate(participant.id, wib.attendanceDate),
+  ]);
 
   let nextAction: AttendanceActionType | 'COMPLETED' = 'CHECK_IN';
   if (existing?.checkInAt && existing.checkOutAt) {
@@ -112,6 +127,17 @@ export async function getParticipantTodayAttendance(
           checkOutAt: existing.checkOutAt?.toISOString() ?? null,
           status: existing.status,
           isCorrected: existing.isCorrected,
+        }
+      : null,
+    todayPermission: todayPermission
+      ? {
+          id: todayPermission.id,
+          type: todayPermission.type,
+          status: todayPermission.status,
+          reason: todayPermission.reason,
+          adminNote: todayPermission.adminNote,
+          startDate: toDateOnlyString(todayPermission.startDate),
+          endDate: toDateOnlyString(todayPermission.endDate),
         }
       : null,
   };
@@ -151,6 +177,18 @@ export async function markParticipantAttendance(
     throw AppError.badRequest(
       'Data wajah Anda belum terdaftar. Selesaikan pendaftaran wajah terlebih dahulu.',
       'UNKNOWN_PARTICIPANT',
+    );
+  }
+
+  const approvedPermission = await findPermissionCoveringDate(
+    participant.id,
+    wib.attendanceDate,
+    ['APPROVED'],
+  );
+  if (approvedPermission) {
+    throw AppError.conflict(
+      'Anda memiliki izin yang telah disetujui pada tanggal ini, sehingga tidak perlu melakukan presensi.',
+      'APPROVED_PERMISSION_EXISTS',
     );
   }
 

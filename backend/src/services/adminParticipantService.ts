@@ -1,5 +1,7 @@
 import { Prisma, type ParticipantStatus } from '@prisma/client';
+import { env } from '../config/env.js';
 import {
+  deleteParticipantIfNoAttendance,
   findDuplicateParticipantConflicts,
   findParticipantById,
   findParticipantDetailForAdmin,
@@ -7,12 +9,15 @@ import {
   updateParticipantInfo,
   updateParticipantStatus,
 } from '../repositories/participantRepository.js';
+import { createPasswordResetToken } from '../repositories/passwordResetRepository.js';
 import { AppError } from '../utils/appError.js';
+import { createSessionTokenPair } from '../utils/crypto.js';
 import { normalizePhone } from '../validation/authSchemas.js';
 import type {
   AdminParticipantsQuery,
   AdminUpdateParticipantInput,
 } from '../validation/adminSchemas.js';
+import { buildPasswordResetUrl } from './authService.js';
 
 function mapParticipantDto(p: {
   id: string;
@@ -198,5 +203,60 @@ export async function setParticipantStatusByAdmin(
       status === 'ACTIVE'
         ? 'Status peserta magang berhasil diaktifkan.'
         : 'Status peserta magang berhasil dinonaktifkan.',
+  };
+}
+
+export async function removeParticipantSafelyByAdmin(id: string) {
+  const outcome = await deleteParticipantIfNoAttendance(id);
+
+  if (outcome.status === 'NOT_FOUND') {
+    throw AppError.notFound('Data peserta magang tidak ditemukan.');
+  }
+
+  if (outcome.status === 'HAS_ATTENDANCE') {
+    throw AppError.conflict(
+      'Peserta tidak dapat dihapus permanen karena sudah memiliki catatan presensi. Gunakan fitur Nonaktifkan untuk menutup akses tanpa menghilangkan riwayat laporan.',
+      'PARTICIPANT_HAS_ATTENDANCE',
+    );
+  }
+
+  return {
+    deletedParticipantId: id,
+    message: `Peserta ${outcome.fullName} (${outcome.nimNis}) berhasil dihapus permanen.`,
+  };
+}
+
+export async function createParticipantResetLinkByAdmin(
+  id: string,
+  adminUserId: string,
+) {
+  const existing = await findParticipantById(id);
+  if (!existing) {
+    throw AppError.notFound('Data peserta magang tidak ditemukan.');
+  }
+
+  if (existing.status !== 'ACTIVE' || !existing.user.isActive) {
+    throw AppError.conflict(
+      'Aktifkan akun peserta terlebih dahulu sebelum membuat tautan reset kata sandi.',
+      'PARTICIPANT_INACTIVE',
+    );
+  }
+
+  const { token, tokenHash } = createSessionTokenPair();
+  const expiresInMinutes = env.PASSWORD_RESET_TTL_MINUTES;
+  const expiresAt = new Date(Date.now() + expiresInMinutes * 60 * 1000);
+
+  await createPasswordResetToken({
+    userId: existing.userId,
+    tokenHash,
+    expiresAt,
+    createdByAdminId: adminUserId,
+  });
+
+  return {
+    resetUrl: buildPasswordResetUrl(token),
+    expiresAt: expiresAt.toISOString(),
+    expiresInMinutes,
+    message: `Tautan reset kata sandi satu kali untuk ${existing.fullName} berhasil dibuat (berlaku ${expiresInMinutes} menit).`,
   };
 }

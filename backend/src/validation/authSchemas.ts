@@ -33,6 +33,7 @@ export const adminLoginSchema = z.object({
     .string()
     .min(1, 'Kata sandi wajib diisi.')
     .max(256, 'Kata sandi terlalu panjang.'),
+  rememberMe: z.boolean().optional().default(false),
 });
 
 export const participantLoginSchema = z.object({
@@ -46,6 +47,7 @@ export const participantLoginSchema = z.object({
     .string()
     .min(1, 'Kata sandi wajib diisi.')
     .max(256, 'Kata sandi terlalu panjang.'),
+  rememberMe: z.boolean().optional().default(false),
 });
 
 export const participantRegisterSchema = z
@@ -118,6 +120,37 @@ export const participantRegisterSchema = z
     }
   });
 
+export const forgotPasswordSchema = z.object({
+  identifier: z
+    .string()
+    .trim()
+    .min(1, 'Email atau username wajib diisi.')
+    .max(255, 'Email atau username terlalu panjang.'),
+  portal: z.enum(['PARTICIPANT', 'ADMIN']).default('PARTICIPANT'),
+});
+
+export const verifyResetTokenQuerySchema = z.object({
+  token: z
+    .string()
+    .trim()
+    .min(16, 'Token reset tidak valid.')
+    .max(200, 'Token reset tidak valid.'),
+});
+
+export const resetPasswordSchema = z.object({
+  token: z
+    .string()
+    .trim()
+    .min(16, 'Token reset tidak valid.')
+    .max(200, 'Token reset tidak valid.'),
+  password: z
+    .string()
+    .min(8, 'Kata sandi baru minimal 8 karakter.')
+    .max(256, 'Kata sandi terlalu panjang.'),
+});
+
 export type AdminLoginInput = z.infer<typeof adminLoginSchema>;
 export type ParticipantLoginInput = z.infer<typeof participantLoginSchema>;
 export type ParticipantRegisterInput = z.infer<typeof participantRegisterSchema>;
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;

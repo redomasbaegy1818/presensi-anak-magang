@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import {
   handleCorrectAdminAttendance,
+  handleCreateParticipantResetLink,
+  handleDeleteAdminParticipant,
   handleExportAdminReports,
   handleGetAdminAttendanceDetail,
   handleGetAdminAttendanceEvidence,
@@ -10,6 +12,8 @@ import {
   handleGetAdminSettings,
   handleListAdminAttendance,
   handleListAdminParticipants,
+  handleListAdminPermissions,
+  handleReviewAdminPermission,
   handleUpdateAdminParticipant,
   handleUpdateAdminParticipantStatus,
   handleUpdateAdminSettings,
@@ -29,6 +33,10 @@ import {
   adminUpdateSettingsSchema,
 } from '../validation/adminSchemas.js';
 import { idParamSchema } from '../validation/commonSchemas.js';
+import {
+  adminPermissionsQuerySchema,
+  adminReviewPermissionSchema,
+} from '../validation/permissionSchemas.js';
 
 export const adminRouter = Router();
 
@@ -55,6 +63,16 @@ adminRouter.patch(
   '/participants/:id/status',
   validateRequest({ params: idParamSchema, body: adminParticipantStatusSchema }),
   asyncHandler(handleUpdateAdminParticipantStatus),
+);
+adminRouter.delete(
+  '/participants/:id',
+  validateRequest({ params: idParamSchema }),
+  asyncHandler(handleDeleteAdminParticipant),
+);
+adminRouter.post(
+  '/participants/:id/reset-password-link',
+  validateRequest({ params: idParamSchema }),
+  asyncHandler(handleCreateParticipantResetLink),
 );
 
 adminRouter.get(
@@ -94,4 +112,15 @@ adminRouter.put(
   '/settings',
   validateRequest({ body: adminUpdateSettingsSchema }),
   asyncHandler(handleUpdateAdminSettings),
+);
+
+adminRouter.get(
+  '/permissions',
+  validateRequest({ query: adminPermissionsQuerySchema }),
+  asyncHandler(handleListAdminPermissions),
+);
+adminRouter.patch(
+  '/permissions/:id/review',
+  validateRequest({ params: idParamSchema, body: adminReviewPermissionSchema }),
+  asyncHandler(handleReviewAdminPermission),
 );

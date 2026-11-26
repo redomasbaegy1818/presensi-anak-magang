@@ -1,17 +1,22 @@
 import type { Request, Response } from 'express';
 import { env } from '../config/env.js';
 import {
+  confirmPasswordReset,
   loginAdmin,
   loginParticipant,
   logoutByToken,
   registerParticipant,
+  requestPasswordReset,
+  verifyPasswordResetToken,
 } from '../services/authService.js';
 import { buildSessionSummary } from '../services/sessionService.js';
 import { clearSessionCookie, setSessionCookie } from '../utils/cookies.js';
 import type {
   AdminLoginInput,
+  ForgotPasswordInput,
   ParticipantLoginInput,
   ParticipantRegisterInput,
+  ResetPasswordInput,
 } from '../validation/authSchemas.js';
 
 export function handleGetSession(req: Request, res: Response): void {
@@ -19,10 +24,14 @@ export function handleGetSession(req: Request, res: Response): void {
 }
 
 export async function handleAdminLogin(req: Request, res: Response): Promise<void> {
-  const { identifier, password } = req.body as AdminLoginInput;
-  const { token, user } = await loginAdmin(identifier, password);
+  const { identifier, password, rememberMe } = req.body as AdminLoginInput;
+  const { token, ttlHours, user } = await loginAdmin(
+    identifier,
+    password,
+    rememberMe,
+  );
 
-  setSessionCookie(res, token);
+  setSessionCookie(res, token, ttlHours);
   res.status(200).json({
     authenticated: true,
     user,
@@ -33,10 +42,14 @@ export async function handleParticipantLogin(
   req: Request,
   res: Response,
 ): Promise<void> {
-  const { email, password } = req.body as ParticipantLoginInput;
-  const { token, user } = await loginParticipant(email, password);
+  const { email, password, rememberMe } = req.body as ParticipantLoginInput;
+  const { token, ttlHours, user } = await loginParticipant(
+    email,
+    password,
+    rememberMe,
+  );
 
-  setSessionCookie(res, token);
+  setSessionCookie(res, token, ttlHours);
   res.status(200).json({
     authenticated: true,
     user,
@@ -69,4 +82,32 @@ export async function handleLogout(req: Request, res: Response): Promise<void> {
   res.status(200).json({
     message: 'Anda telah keluar dari sistem.',
   });
+}
+
+export async function handleForgotPassword(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const { identifier, portal } = req.body as ForgotPasswordInput;
+  const result = await requestPasswordReset(identifier, portal);
+  res.status(200).json(result);
+}
+
+export async function handleVerifyResetToken(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const token = String((req.query as { token?: string }).token ?? '');
+  const result = await verifyPasswordResetToken(token);
+  res.status(200).json(result);
+}
+
+export async function handleResetPassword(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const { token, password } = req.body as ResetPasswordInput;
+  const result = await confirmPasswordReset(token, password);
+  clearSessionCookie(res);
+  res.status(200).json(result);
 }

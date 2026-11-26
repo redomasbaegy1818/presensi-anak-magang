@@ -230,6 +230,47 @@ async function runTests() {
     );
     assert.equal(activateRes.status, 200);
 
+    // 6. Safe Delete: reject when attendance exists, allow when no attendance
+    await prisma.attendance.create({
+      data: {
+        participantId: p1.id,
+        attendanceDate: new Date('2099-05-01T00:00:00.000Z'),
+        checkInAt: new Date('2099-05-01T01:00:00.000Z'),
+        status: 'PRESENT',
+        verificationStatus: 'VERIFIED',
+      },
+    });
+
+    const deleteBlockedRes = await fetch(
+      `${baseUrl}/admin/participants/${p1.id}`,
+      {
+        method: 'DELETE',
+        headers: { Cookie: adminCookie },
+      },
+    );
+    assert.equal(deleteBlockedRes.status, 409);
+
+    const deleteUnusedRes = await fetch(
+      `${baseUrl}/admin/participants/${p2.id}`,
+      {
+        method: 'DELETE',
+        headers: { Cookie: adminCookie },
+      },
+    );
+    assert.equal(deleteUnusedRes.status, 200);
+
+    const checkDeletedRes = await fetch(
+      `${baseUrl}/admin/participants/${p2.id}`,
+      {
+        headers: { Cookie: adminCookie },
+      },
+    );
+    assert.equal(checkDeletedRes.status, 404);
+
+    await prisma.attendance.deleteMany({
+      where: { participantId: p1.id },
+    });
+
     console.log('SEMUA TEST ADMIN PARTICIPANT MANAGEMENT LOLOS.');
   } finally {
     await new Promise<void>((resolve) => server.close(() => resolve()));

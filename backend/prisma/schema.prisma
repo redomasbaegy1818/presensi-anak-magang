@@ -34,6 +34,17 @@ enum AttendanceEvidenceType {
   CHECK_OUT
 }
 
+enum PermissionType {
+  IZIN
+  SAKIT
+}
+
+enum PermissionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model User {
   id           String    @id @default(cuid())
   email        String    @unique
@@ -45,10 +56,13 @@ model User {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  participant     Participant?
-  sessions        Session[]
-  corrections     AttendanceCorrectionLog[]
-  updatedSettings AttendanceSetting[]
+  participant                Participant?
+  sessions                   Session[]
+  corrections                AttendanceCorrectionLog[]
+  updatedSettings            AttendanceSetting[]
+  reviewedPermissions        PermissionRequest[]
+  passwordResetTokens        PasswordResetToken[]      @relation("PasswordResetTarget")
+  createdPasswordResetTokens PasswordResetToken[]      @relation("PasswordResetCreator")
 
   @@index([role, isActive])
 }
@@ -81,9 +95,10 @@ model Participant {
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
 
-  user         User          @relation(fields: [userId], references: [id], onDelete: Restrict)
-  faceTemplate FaceTemplate?
-  attendances  Attendance[]
+  user               User                @relation(fields: [userId], references: [id], onDelete: Restrict)
+  faceTemplate       FaceTemplate?
+  attendances        Attendance[]
+  permissionRequests PermissionRequest[]
 
   @@index([status])
   @@index([division])
@@ -179,4 +194,43 @@ model AttendanceCorrectionLog {
   @@index([attendanceId])
   @@index([adminUserId])
   @@index([createdAt])
+}
+
+model PermissionRequest {
+  id            String           @id @default(cuid())
+  participantId String
+  type          PermissionType
+  startDate     DateTime         @db.Date
+  endDate       DateTime         @db.Date
+  reason        String
+  status        PermissionStatus @default(PENDING)
+  adminNote     String?
+  reviewedById  String?
+  reviewedAt    DateTime?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  participant Participant @relation(fields: [participantId], references: [id], onDelete: Restrict)
+  reviewedBy  User?       @relation(fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([participantId])
+  @@index([status])
+  @@index([startDate, endDate])
+  @@index([createdAt])
+}
+
+model PasswordResetToken {
+  id               String    @id @default(cuid())
+  userId           String
+  tokenHash        String    @unique
+  expiresAt        DateTime
+  usedAt           DateTime?
+  createdByAdminId String?
+  createdAt        DateTime  @default(now())
+
+  user           User  @relation("PasswordResetTarget", fields: [userId], references: [id], onDelete: Cascade)
+  createdByAdmin User? @relation("PasswordResetCreator", fields: [createdByAdminId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([expiresAt])
 }

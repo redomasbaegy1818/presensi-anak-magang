@@ -10,7 +10,12 @@ import {
   registerParticipantFace,
   verifyParticipantFace,
 } from '../services/faceVerificationService.js';
+import {
+  getParticipantPermissionsList,
+  submitParticipantPermission,
+} from '../services/permissionService.js';
 import { AppError } from '../utils/appError.js';
+import type { ParticipantCreatePermissionInput } from '../validation/permissionSchemas.js';
 
 export async function handleGetParticipantProfile(
   req: Request,
@@ -136,4 +141,34 @@ export async function handleGetAttendanceHistory(
   );
 
   res.status(200).json({ records });
+}
+
+export async function handleListParticipantPermissions(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  if (!req.authUser?.participant) {
+    throw AppError.forbidden('Akun peserta tidak ditemukan.');
+  }
+
+  const result = await getParticipantPermissionsList(
+    req.authUser.participant.id,
+  );
+  res.status(200).json(result);
+}
+
+export async function handleCreateParticipantPermission(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  if (!req.authUser?.participant) {
+    throw AppError.forbidden('Akun peserta tidak ditemukan.');
+  }
+
+  const body = req.body as ParticipantCreatePermissionInput;
+  const result = await submitParticipantPermission(
+    req.authUser.participant.id,
+    body,
+  );
+  res.status(201).json(result);
 }

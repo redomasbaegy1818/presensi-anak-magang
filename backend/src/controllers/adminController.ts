@@ -7,9 +7,11 @@ import {
   getAdminAttendanceList,
 } from '../services/adminAttendanceService.js';
 import {
+  createParticipantResetLinkByAdmin,
   editParticipantByAdmin,
   getAdminParticipantDetail,
   getAdminParticipantsList,
+  removeParticipantSafelyByAdmin,
   setParticipantStatusByAdmin,
 } from '../services/adminParticipantService.js';
 import {
@@ -21,6 +23,10 @@ import {
   getAdminAttendanceSettings,
   updateAdminAttendanceSettings,
 } from '../services/adminSettingsService.js';
+import {
+  getAdminPermissionsList,
+  reviewAdminPermission,
+} from '../services/permissionService.js';
 import { AppError } from '../utils/appError.js';
 import type {
   AdminAttendanceQuery,
@@ -32,6 +38,10 @@ import type {
   AdminUpdateParticipantInput,
   AdminUpdateSettingsInput,
 } from '../validation/adminSchemas.js';
+import type {
+  AdminPermissionsQuery,
+  AdminReviewPermissionInput,
+} from '../validation/permissionSchemas.js';
 
 export async function handleGetAdminOverview(
   req: Request,
@@ -80,6 +90,30 @@ export async function handleUpdateAdminParticipantStatus(
   const { status } = req.body as AdminParticipantStatusInput;
   const result = await setParticipantStatusByAdmin(id, status);
   res.status(200).json(result);
+}
+
+export async function handleDeleteAdminParticipant(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const id = String(req.params.id ?? '');
+  const result = await removeParticipantSafelyByAdmin(id);
+  res.status(200).json(result);
+}
+
+export async function handleCreateParticipantResetLink(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  if (!req.authUser) {
+    throw AppError.unauthorized();
+  }
+  const id = String(req.params.id ?? '');
+  const result = await createParticipantResetLinkByAdmin(
+    id,
+    req.authUser.userId,
+  );
+  res.status(201).json(result);
 }
 
 export async function handleListAdminAttendance(
@@ -172,5 +206,27 @@ export async function handleUpdateAdminSettings(
     req.authUser.userId,
     body,
   );
+  res.status(200).json(result);
+}
+
+export async function handleListAdminPermissions(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const query = req.query as unknown as AdminPermissionsQuery;
+  const result = await getAdminPermissionsList(query);
+  res.status(200).json(result);
+}
+
+export async function handleReviewAdminPermission(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  if (!req.authUser) {
+    throw AppError.unauthorized();
+  }
+  const id = String(req.params.id ?? '');
+  const body = req.body as AdminReviewPermissionInput;
+  const result = await reviewAdminPermission(id, req.authUser.userId, body);
   res.status(200).json(result);
 }

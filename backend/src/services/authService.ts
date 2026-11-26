@@ -10,6 +10,11 @@ import {
   findDuplicateParticipantConflicts,
   findParticipantByUserId,
 } from '../repositories/participantRepository.js';
+import {
+  consumePasswordResetTokenAndUpdatePassword,
+  createPasswordResetToken,
+  findValidPasswordResetToken,
+} from '../repositories/passwordResetRepository.js';
 import { AppError } from '../utils/appError.js';
 import {
   createSessionTokenPair,
@@ -21,20 +26,26 @@ import {
   normalizePhone,
   type ParticipantRegisterInput,
 } from '../validation/authSchemas.js';
+import { isSmtpConfigured, sendPasswordResetEmail } from './mailerService.js';
 import type { AuthUserContext } from './sessionService.js';
 
 // Pre-computed dummy scrypt hash to keep response timing consistent when user is not found.
 const DUMMY_PASSWORD_HASH =
   '00112233445566778899aabbccddeeff:' + '00'.repeat(64);
 
-function getSessionExpiryDate(): Date {
-  return new Date(Date.now() + env.SESSION_TTL_HOURS * 60 * 60 * 1000);
+function resolveSessionTtlHours(rememberMe: boolean): number {
+  return rememberMe ? Math.max(env.SESSION_TTL_HOURS, 168) : env.SESSION_TTL_HOURS;
+}
+
+function getSessionExpiryDate(ttlHours: number = env.SESSION_TTL_HOURS): Date {
+  return new Date(Date.now() + ttlHours * 60 * 60 * 1000);
 }
 
 export async function loginAdmin(
   identifier: string,
   password: string,
-): Promise<{ token: string; user: AuthUserContext }> {
+  rememberMe: boolean = false,
+): Promise<{ token: string; ttlHours: number; user: AuthUserContext }> {
   const user = await findUserByIdentifier(identifier);
   const hashToVerify = user?.passwordHash ?? DUMMY_PASSWORD_HASH;
   const passwordValid = await verifyPassword(password, hashToVerify);
@@ -49,11 +60,13 @@ export async function loginAdmin(
     );
   }
 
+  const ttlHours = resolveSessionTtlHours(rememberMe);
   const { token, tokenHash } = createSessionTokenPair();
-  await createUserSession(user.id, tokenHash, getSessionExpiryDate());
+  await createUserSession(user.id, tokenHash, getSessionExpiryDate(ttlHours));
 
   return {
     token,
+    ttlHours,
     user: {
       userId: user.id,
       email: user.email,
@@ -68,7 +81,8 @@ export async function loginAdmin(
 export async function loginParticipant(
   email: string,
   password: string,
-): Promise<{ token: string; user: AuthUserContext }> {
+  rememberMe: boolean = false,
+): Promise<{ token: string; ttlHours: number; user: AuthUserContext }> {
   const user = await findUserByIdentifier(email);
   const hashToVerify = user?.passwordHash ?? DUMMY_PASSWORD_HASH;
   const passwordValid = await verifyPassword(password, hashToVerify);
@@ -90,11 +104,13 @@ export async function loginParticipant(
     );
   }
 
+  const ttlHours = resolveSessionTtlHours(rememberMe);
   const { token, tokenHash } = createSessionTokenPair();
-  await createUserSession(user.id, tokenHash, getSessionExpiryDate());
+  await createUserSession(user.id, tokenHash, getSessionExpiryDate(ttlHours));
 
   return {
     token,
+    ttlHours,
     user: {
       userId: user.id,
       email: user.email,
@@ -233,4 +249,121 @@ export async function logoutByToken(rawToken: string | undefined): Promise<void>
   if (!rawToken) return;
   const tokenHash = hashSessionToken(rawToken);
   await deleteSessionByTokenHash(tokenHash);
+}
+
+export function buildPasswordResetUrl(rawToken: string): string {
+  const origin = env.APP_ORIGIN.replace(/\/+$/, '');
+  return `${origin}/reset-password?token=${encodeURIComponent(rawToken)}`;
+}
+
+export async function requestPasswordReset(
+  identifier: string,
+  portal: 'PARTICIPANT' | 'ADMIN',
+) {
+  const smtpConfigured = isSmtpConfigured();
+  const user = await findUserByIdentifier(identifier);
+
+  let eligible = Boolean(user && user.isActive && user.role === portal);
+  let recipientName = user?.username || user?.email || 'Pengguna';
+
+  if (eligible && user && user.role === 'PARTICIPANT') {
+    const participant = await findParticipantByUserId(user.id);
+    if (!participant || participant.status !== 'ACTIVE') {
+      eligible = false;
+    } else {
+      recipientName = participant.fullName;
+    }
+  }
+
+  if (eligible && user) {
+    const { token, tokenHash } = createSessionTokenPair();
+    const expiresInMinutes = env.PASSWORD_RESET_TTL_MINUTES;
+    const expiresAt = new Date(Date.now() + expiresInMinutes * 60 * 1000);
+
+    await createPasswordResetToken({
+      userId: user.id,
+      tokenHash,
+      expiresAt,
+    });
+
+    const resetUrl = buildPasswordResetUrl(token);
+    try {
+      await sendPasswordResetEmail({
+        to: user.email,
+        recipientName,
+        portal,
+        resetUrl,
+        expiresInMinutes,
+      });
+    } catch (error) {
+      console.error('[PASSWORD RESET] Gagal mengirim email reset:', error);
+    }
+  }
+
+  return {
+    smtpConfigured,
+    message: smtpConfigured
+      ? 'Jika akun ditemukan dan aktif, tautan pengaturan ulang kata sandi telah dikirimkan ke email terdaftar.'
+      : 'Permintaan diproses. Layanan email kantor belum diaktifkan — hubungi admin kantor (untuk peserta) atau cek konsol server backend saat pengembangan.',
+  };
+}
+
+export async function verifyPasswordResetToken(rawToken: string) {
+  const tokenHash = hashSessionToken(rawToken);
+  const record = await findValidPasswordResetToken(tokenHash);
+
+  if (
+    !record ||
+    !record.user.isActive ||
+    (record.user.role === 'PARTICIPANT' &&
+      record.user.participant?.status !== 'ACTIVE')
+  ) {
+    throw AppError.badRequest(
+      'Tautan reset kata sandi tidak valid atau sudah kedaluwarsa.',
+      'INVALID_RESET_TOKEN',
+    );
+  }
+
+  return {
+    valid: true,
+    portal: record.user.role,
+    accountLabel:
+      record.user.participant?.fullName ||
+      record.user.username ||
+      record.user.email,
+    expiresAt: record.expiresAt.toISOString(),
+  };
+}
+
+export async function confirmPasswordReset(
+  rawToken: string,
+  newPassword: string,
+) {
+  const tokenHash = hashSessionToken(rawToken);
+  const record = await findValidPasswordResetToken(tokenHash);
+
+  if (
+    !record ||
+    !record.user.isActive ||
+    (record.user.role === 'PARTICIPANT' &&
+      record.user.participant?.status !== 'ACTIVE')
+  ) {
+    throw AppError.badRequest(
+      'Tautan reset kata sandi tidak valid atau sudah kedaluwarsa.',
+      'INVALID_RESET_TOKEN',
+    );
+  }
+
+  const newPasswordHash = await hashPassword(newPassword);
+  await consumePasswordResetTokenAndUpdatePassword({
+    tokenId: record.id,
+    userId: record.userId,
+    newPasswordHash,
+  });
+
+  return {
+    portal: record.user.role,
+    message:
+      'Kata sandi berhasil diperbarui. Silakan masuk menggunakan kata sandi baru Anda.',
+  };
 }

@@ -276,3 +276,50 @@ export async function updateParticipantStatus(
     return participant;
   });
 }
+
+export async function deleteParticipantIfNoAttendance(participantId: string) {
+  return prisma.$transaction(async (tx) => {
+    const existing = await tx.participant.findUnique({
+      where: { id: participantId },
+      select: {
+        id: true,
+        userId: true,
+        fullName: true,
+        nimNis: true,
+      },
+    });
+
+    if (!existing) {
+      return { status: 'NOT_FOUND' as const };
+    }
+
+    const attendanceCount = await tx.attendance.count({
+      where: { participantId: existing.id },
+    });
+    if (attendanceCount > 0) {
+      return { status: 'HAS_ATTENDANCE' as const, attendanceCount };
+    }
+
+    await tx.permissionRequest.deleteMany({
+      where: { participantId: existing.id },
+    });
+    await tx.faceTemplate.deleteMany({
+      where: { participantId: existing.id },
+    });
+    await tx.participant.delete({
+      where: { id: existing.id },
+    });
+    await tx.session.deleteMany({
+      where: { userId: existing.userId },
+    });
+    await tx.user.delete({
+      where: { id: existing.userId },
+    });
+
+    return {
+      status: 'DELETED' as const,
+      fullName: existing.fullName,
+      nimNis: existing.nimNis,
+    };
+  });
+}

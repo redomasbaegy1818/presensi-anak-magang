@@ -1,8 +1,10 @@
 import { Router } from 'express';
 import {
+  handleCreateParticipantPermission,
   handleGetAttendanceHistory,
   handleGetParticipantProfile,
   handleGetTodayAttendance,
+  handleListParticipantPermissions,
   handleMarkAttendance,
   handleRegisterParticipantFace,
   handleVerifyParticipantFace,
@@ -16,6 +18,7 @@ import {
   attendanceHistoryQuerySchema,
   attendanceMarkBodySchema,
 } from '../validation/attendanceSchemas.js';
+import { participantCreatePermissionSchema } from '../validation/permissionSchemas.js';
 
 export const participantRouter = Router();
 
@@ -51,4 +54,14 @@ participantRouter.get(
   '/attendance/history',
   validateRequest({ query: attendanceHistoryQuerySchema }),
   asyncHandler(handleGetAttendanceHistory),
+);
+
+participantRouter.get(
+  '/permissions',
+  asyncHandler(handleListParticipantPermissions),
+);
+participantRouter.post(
+  '/permissions',
+  validateRequest({ body: participantCreatePermissionSchema }),
+  asyncHandler(handleCreateParticipantPermission),
 );

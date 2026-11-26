@@ -31,6 +31,13 @@ const envSchema = z
     RATE_LIMIT_WINDOW_MS: z.coerce.number().int().min(1000).default(15 * 60 * 1000),
     RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().min(1).default(120),
     AUTH_RATE_LIMIT_MAX: z.coerce.number().int().min(1).default(20),
+    PASSWORD_RESET_TTL_MINUTES: z.coerce.number().int().min(5).max(120).default(30),
+    SMTP_HOST: z.string().optional().default(''),
+    SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(587),
+    SMTP_SECURE: z.enum(['true', 'false']).optional().default('false'),
+    SMTP_USER: z.string().optional().default(''),
+    SMTP_PASS: z.string().optional().default(''),
+    SMTP_FROM: z.string().optional().default(''),
   })
   .superRefine((data, ctx) => {
     if (data.NODE_ENV === 'production') {
