@@ -1,0 +1,97 @@
+import { z } from 'zod';
+import {
+  isValidCalendarDate,
+  normalizePhone,
+  PHONE_REGEX,
+} from './authSchemas.js';
+
+export const adminParticipantsQuerySchema = z.object({
+  search: z.string().trim().max(100).optional(),
+  status: z.enum(['ALL', 'ACTIVE', 'INACTIVE']).default('ALL'),
+  division: z.string().trim().max(100).optional(),
+  faceStatus: z.enum(['ALL', 'REGISTERED', 'UNREGISTERED']).default('ALL'),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+});
+
+export const adminUpdateParticipantSchema = z
+  .object({
+    fullName: z
+      .string()
+      .trim()
+      .min(2, 'Nama lengkap minimal 2 karakter.')
+      .max(120, 'Nama lengkap maksimal 120 karakter.'),
+    nimNis: z
+      .string()
+      .trim()
+      .min(3, 'NIM/NIS minimal 3 karakter.')
+      .max(50, 'NIM/NIS maksimal 50 karakter.'),
+    universitySchool: z
+      .string()
+      .trim()
+      .min(2, 'Universitas atau sekolah wajib diisi.')
+      .max(150, 'Nama universitas/sekolah terlalu panjang.'),
+    major: z
+      .string()
+      .trim()
+      .min(2, 'Jurusan wajib diisi.')
+      .max(120, 'Jurusan terlalu panjang.'),
+    division: z
+      .string()
+      .trim()
+      .min(2, 'Divisi penempatan wajib dipilih.')
+      .max(100, 'Nama divisi terlalu panjang.'),
+    phone: z
+      .string()
+      .trim()
+      .refine(
+        (val) => {
+          const digits = normalizePhone(val);
+          return (
+            PHONE_REGEX.test(digits) &&
+            digits.replace(/\D/g, '').length >= 9 &&
+            digits.replace(/\D/g, '').length <= 15
+          );
+        },
+        'Nomor HP tidak valid (gunakan 9–15 digit, contoh: 081234567890).',
+      ),
+    email: z
+      .string()
+      .trim()
+      .min(1, 'Email wajib diisi.')
+      .email('Format email tidak valid.')
+      .max(255, 'Email terlalu panjang.'),
+    internshipStartDate: z
+      .string()
+      .trim()
+      .refine(isValidCalendarDate, 'Tanggal mulai magang tidak valid.'),
+    internshipEndDate: z
+      .string()
+      .trim()
+      .refine(isValidCalendarDate, 'Tanggal selesai magang tidak valid.'),
+  })
+  .superRefine((data, ctx) => {
+    if (
+      isValidCalendarDate(data.internshipStartDate) &&
+      isValidCalendarDate(data.internshipEndDate) &&
+      data.internshipEndDate < data.internshipStartDate
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['internshipEndDate'],
+        message: 'Tanggal selesai magang tidak boleh lebih awal dari tanggal mulai.',
+      });
+    }
+  });
+
+export const adminParticipantStatusSchema = z.object({
+  status: z.enum(['ACTIVE', 'INACTIVE']),
+});
+
+export type AdminParticipantsQuery = z.infer<typeof adminParticipantsQuerySchema>;
+export type AdminUpdateParticipantInput = z.infer<
+  typeof adminUpdateParticipantSchema
+>;
+export type AdminParticipantStatusInput = z.infer<
+  typeof adminParticipantStatusSchema
+>;

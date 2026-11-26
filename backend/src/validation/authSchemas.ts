@@ -1,9 +1,9 @@
 import { z } from 'zod';
 
 const DATE_ONLY_REGEX = /^\d{4}-\d{2}-\d{2}$/;
-const PHONE_REGEX = /^(?:\+62|62|0)[0-9\s-]{8,16}$/;
+export const PHONE_REGEX = /^(?:\+62|62|0)[0-9\s-]{8,16}$/;
 
-function isValidCalendarDate(dateStr: string): boolean {
+export function isValidCalendarDate(dateStr: string): boolean {
   if (!DATE_ONLY_REGEX.test(dateStr)) return false;
   const parts = dateStr.split('-').map(Number);
   const year = parts[0];

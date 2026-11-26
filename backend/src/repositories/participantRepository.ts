@@ -99,6 +99,7 @@ export async function findParticipantByUserId(userId: string) {
 export async function findDuplicateParticipantConflicts(
   email: string,
   nimNis: string,
+  exclude?: { participantId: string; userId: string },
 ): Promise<{ emailExists: boolean; nimNisExists: boolean }> {
   const normalizedEmail = normalizeEmail(email);
   const normalizedNimNis = normalizeNimNis(nimNis);
@@ -115,9 +116,138 @@ export async function findDuplicateParticipantConflicts(
   ]);
 
   return {
-    emailExists: Boolean(existingUser),
-    nimNisExists: Boolean(existingParticipant),
+    emailExists: Boolean(
+      existingUser && (!exclude || existingUser.id !== exclude.userId),
+    ),
+    nimNisExists: Boolean(
+      existingParticipant &&
+        (!exclude || existingParticipant.id !== exclude.participantId),
+    ),
   };
+}
+
+export interface ListParticipantsFilter {
+  search?: string;
+  status?: 'ALL' | 'ACTIVE' | 'INACTIVE';
+  division?: string;
+  faceStatus?: 'ALL' | 'REGISTERED' | 'UNREGISTERED';
+  page: number;
+  limit: number;
+}
+
+export async function listParticipantsForAdmin(filter: ListParticipantsFilter) {
+  const where: Prisma.ParticipantWhereInput = {};
+
+  if (filter.status && filter.status !== 'ALL') {
+    where.status = filter.status;
+  }
+
+  if (filter.division && filter.division !== 'ALL') {
+    where.division = filter.division;
+  }
+
+  if (filter.faceStatus === 'REGISTERED') {
+    where.faceTemplate = { isNot: null };
+  } else if (filter.faceStatus === 'UNREGISTERED') {
+    where.faceTemplate = { is: null };
+  }
+
+  if (filter.search) {
+    const q = filter.search.trim();
+    if (q) {
+      where.OR = [
+        { fullName: { contains: q, mode: 'insensitive' } },
+        { nimNis: { contains: q, mode: 'insensitive' } },
+        { universitySchool: { contains: q, mode: 'insensitive' } },
+        { major: { contains: q, mode: 'insensitive' } },
+        { user: { email: { contains: q, mode: 'insensitive' } } },
+      ];
+    }
+  }
+
+  const skip = (filter.page - 1) * filter.limit;
+
+  const [items, total, divisionRows] = await Promise.all([
+    prisma.participant.findMany({
+      where,
+      select: PUBLIC_PARTICIPANT_SELECT,
+      orderBy: [{ status: 'asc' }, { fullName: 'asc' }],
+      skip,
+      take: filter.limit,
+    }),
+    prisma.participant.count({ where }),
+    prisma.participant.findMany({
+      distinct: ['division'],
+      select: { division: true },
+      orderBy: { division: 'asc' },
+    }),
+  ]);
+
+  return {
+    items,
+    total,
+    divisions: divisionRows.map((d) => d.division),
+  };
+}
+
+export async function findParticipantDetailForAdmin(id: string) {
+  return prisma.participant.findUnique({
+    where: { id },
+    select: {
+      ...PUBLIC_PARTICIPANT_SELECT,
+      attendances: {
+        orderBy: { attendanceDate: 'desc' },
+        take: 15,
+        select: {
+          id: true,
+          attendanceDate: true,
+          checkInAt: true,
+          checkOutAt: true,
+          status: true,
+          verificationStatus: true,
+          isCorrected: true,
+        },
+      },
+    },
+  });
+}
+
+export interface UpdateParticipantInfoInput {
+  participantId: string;
+  userId: string;
+  fullName: string;
+  nimNis: string;
+  universitySchool: string;
+  major: string;
+  division: string;
+  phone: string;
+  email: string;
+  internshipStartDate: Date;
+  internshipEndDate: Date;
+}
+
+export async function updateParticipantInfo(input: UpdateParticipantInfoInput) {
+  return prisma.$transaction(async (tx) => {
+    await tx.user.update({
+      where: { id: input.userId },
+      data: { email: normalizeEmail(input.email) },
+    });
+
+    return tx.participant.update({
+      where: { id: input.participantId },
+      data: {
+        fullName: input.fullName.trim(),
+        nimNis: normalizeNimNis(input.nimNis),
+        universitySchool: input.universitySchool.trim(),
+        major: input.major.trim(),
+        division: input.division.trim(),
+        phone: input.phone.trim(),
+        internshipStartDate: input.internshipStartDate,
+        internshipEndDate: input.internshipEndDate,
+      },
+      select: PUBLIC_PARTICIPANT_SELECT,
+    });
+  });
 }
 
 export async function updateParticipantStatus(
