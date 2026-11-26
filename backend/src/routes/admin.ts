@@ -1,7 +1,11 @@
 import { Router } from 'express';
 import {
+  handleCorrectAdminAttendance,
+  handleGetAdminAttendanceDetail,
+  handleGetAdminAttendanceEvidence,
   handleGetAdminOverview,
   handleGetAdminParticipantDetail,
+  handleListAdminAttendance,
   handleListAdminParticipants,
   handleUpdateAdminParticipant,
   handleUpdateAdminParticipantStatus,
@@ -10,6 +14,9 @@ import { requireAuth, requireRole } from '../middleware/authMiddleware.js';
 import { validateRequest } from '../middleware/validateRequest.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import {
+  adminAttendanceQuerySchema,
+  adminCorrectAttendanceSchema,
+  adminEvidenceParamsSchema,
   adminParticipantsQuerySchema,
   adminParticipantStatusSchema,
   adminUpdateParticipantSchema,
@@ -41,4 +48,25 @@ adminRouter.patch(
   '/participants/:id/status',
   validateRequest({ params: idParamSchema, body: adminParticipantStatusSchema }),
   asyncHandler(handleUpdateAdminParticipantStatus),
+);
+
+adminRouter.get(
+  '/attendance',
+  validateRequest({ query: adminAttendanceQuerySchema }),
+  asyncHandler(handleListAdminAttendance),
+);
+adminRouter.get(
+  '/attendance/:id',
+  validateRequest({ params: idParamSchema }),
+  asyncHandler(handleGetAdminAttendanceDetail),
+);
+adminRouter.patch(
+  '/attendance/:id/correct',
+  validateRequest({ params: idParamSchema, body: adminCorrectAttendanceSchema }),
+  asyncHandler(handleCorrectAdminAttendance),
+);
+adminRouter.get(
+  '/attendance/:id/evidence/:type',
+  validateRequest({ params: adminEvidenceParamsSchema }),
+  asyncHandler(handleGetAdminAttendanceEvidence),
 );

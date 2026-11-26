@@ -18,7 +18,8 @@
     "test:participant-reg": "tsx src/scripts/testParticipantRegistration.ts",
     "test:attendance": "tsx src/scripts/testAttendanceSystem.ts",
     "test:admin-dashboard": "tsx src/scripts/testAdminDashboard.ts",
-    "test:admin-participants": "tsx src/scripts/testAdminParticipants.ts"
+    "test:admin-participants": "tsx src/scripts/testAdminParticipants.ts",
+    "test:admin-attendance": "tsx src/scripts/testAdminAttendance.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.6.0",

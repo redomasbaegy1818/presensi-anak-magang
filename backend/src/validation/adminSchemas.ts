@@ -88,10 +88,91 @@ export const adminParticipantStatusSchema = z.object({
   status: z.enum(['ACTIVE', 'INACTIVE']),
 });
 
+const DATE_FILTER_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+const TIME_HHMM_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+export const adminAttendanceQuerySchema = z.object({
+  search: z.string().trim().max(100).optional(),
+  participantId: z.string().trim().max(100).optional(),
+  date: z
+    .string()
+    .trim()
+    .refine(
+      (val) => !val || DATE_FILTER_REGEX.test(val),
+      'Format tanggal harus YYYY-MM-DD.',
+    )
+    .optional(),
+  status: z.enum(['ALL', 'PRESENT', 'LATE', 'ABSENT']).default('ALL'),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+});
+
+export const adminCorrectAttendanceSchema = z
+  .object({
+    status: z.enum(['PRESENT', 'LATE', 'ABSENT']),
+    checkInTime: z
+      .string()
+      .trim()
+      .refine(
+        (val) => val === '' || TIME_HHMM_REGEX.test(val),
+        'Format jam masuk harus HH:mm.',
+      )
+      .nullable()
+      .optional(),
+    checkOutTime: z
+      .string()
+      .trim()
+      .refine(
+        (val) => val === '' || TIME_HHMM_REGEX.test(val),
+        'Format jam pulang harus HH:mm.',
+      )
+      .nullable()
+      .optional(),
+    reason: z
+      .string()
+      .trim()
+      .min(5, 'Alasan koreksi minimal 5 karakter.')
+      .max(500, 'Alasan koreksi maksimal 500 karakter.'),
+  })
+  .superRefine((data, ctx) => {
+    const inVal =
+      typeof data.checkInTime === 'string' && data.checkInTime !== ''
+        ? data.checkInTime
+        : null;
+    const outVal =
+      typeof data.checkOutTime === 'string' && data.checkOutTime !== ''
+        ? data.checkOutTime
+        : null;
+
+    if (outVal && !inVal && data.checkInTime === null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['checkOutTime'],
+        message: 'Jam pulang tidak dapat diisi jika jam masuk dikosongkan.',
+      });
+    }
+    if (inVal && outVal && outVal < inVal) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['checkOutTime'],
+        message: 'Jam pulang tidak boleh lebih awal dari jam masuk.',
+      });
+    }
+  });
+
+export const adminEvidenceParamsSchema = z.object({
+  id: z.string().trim().min(1),
+  type: z.enum(['CHECK_IN', 'CHECK_OUT']),
+});
+
 export type AdminParticipantsQuery = z.infer<typeof adminParticipantsQuerySchema>;
 export type AdminUpdateParticipantInput = z.infer<
   typeof adminUpdateParticipantSchema
 >;
 export type AdminParticipantStatusInput = z.infer<
   typeof adminParticipantStatusSchema
+>;
+export type AdminAttendanceQuery = z.infer<typeof adminAttendanceQuerySchema>;
+export type AdminCorrectAttendanceInput = z.infer<
+  typeof adminCorrectAttendanceSchema
 >;

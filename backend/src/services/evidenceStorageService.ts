@@ -60,3 +60,19 @@ export async function deletePrivateEvidenceFile(storageKey: string): Promise<voi
   const fullPath = path.join(storageRoot, safeRelative);
   await fs.unlink(fullPath).catch(() => undefined);
 }
+
+export async function readPrivateEvidenceFile(
+  storageKey: string,
+): Promise<Buffer | null> {
+  const storageRoot = resolveStorageRoot();
+  const safeRelative = path.normalize(storageKey).replace(/^(\.\.[/\\])+/, '');
+  const fullPath = path.resolve(storageRoot, safeRelative);
+  if (!fullPath.startsWith(storageRoot)) {
+    return null;
+  }
+  try {
+    return await fs.readFile(fullPath);
+  } catch {
+    return null;
+  }
+}

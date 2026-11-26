@@ -1,7 +1,8 @@
-import type {
-  AttendanceEvidenceType,
-  AttendanceStatus,
-  VerificationStatus,
+import {
+  Prisma,
+  type AttendanceEvidenceType,
+  type AttendanceStatus,
+  type VerificationStatus,
 } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 
@@ -216,5 +217,172 @@ export async function correctAttendanceWithAudit(
     });
 
     return updated;
+  });
+}
+
+export interface ListAdminAttendanceFilter {
+  search?: string;
+  participantId?: string;
+  date?: string;
+  status?: 'ALL' | 'PRESENT' | 'LATE' | 'ABSENT';
+  page: number;
+  limit: number;
+}
+
+export async function listAttendancesForAdmin(
+  filter: ListAdminAttendanceFilter,
+) {
+  const where: Prisma.AttendanceWhereInput = {};
+
+  if (filter.participantId && filter.participantId !== 'ALL') {
+    where.participantId = filter.participantId;
+  }
+
+  if (filter.date) {
+    where.attendanceDate = new Date(`${filter.date}T00:00:00.000Z`);
+  }
+
+  if (filter.status && filter.status !== 'ALL') {
+    where.status = filter.status;
+  }
+
+  if (filter.search) {
+    const q = filter.search.trim();
+    if (q) {
+      where.participant = {
+        OR: [
+          { fullName: { contains: q, mode: 'insensitive' } },
+          { nimNis: { contains: q, mode: 'insensitive' } },
+          { division: { contains: q, mode: 'insensitive' } },
+        ],
+      };
+    }
+  }
+
+  const skip = (filter.page - 1) * filter.limit;
+
+  const [items, total, participantOptions] = await Promise.all([
+    prisma.attendance.findMany({
+      where,
+      orderBy: [{ attendanceDate: 'desc' }, { updatedAt: 'desc' }],
+      skip,
+      take: filter.limit,
+      select: {
+        id: true,
+        participantId: true,
+        attendanceDate: true,
+        checkInAt: true,
+        checkOutAt: true,
+        status: true,
+        verificationStatus: true,
+        isCorrected: true,
+        participant: {
+          select: {
+            fullName: true,
+            nimNis: true,
+            division: true,
+          },
+        },
+        evidences: {
+          select: {
+            type: true,
+            capturedAt: true,
+          },
+        },
+        _count: {
+          select: {
+            correctionLogs: true,
+          },
+        },
+      },
+    }),
+    prisma.attendance.count({ where }),
+    prisma.participant.findMany({
+      select: {
+        id: true,
+        fullName: true,
+        nimNis: true,
+      },
+      orderBy: { fullName: 'asc' },
+    }),
+  ]);
+
+  return {
+    items,
+    total,
+    participantOptions,
+  };
+}
+
+export async function findAttendanceDetailForAdmin(id: string) {
+  return prisma.attendance.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      participantId: true,
+      attendanceDate: true,
+      checkInAt: true,
+      checkOutAt: true,
+      status: true,
+      verificationStatus: true,
+      isCorrected: true,
+      notes: true,
+      createdAt: true,
+      updatedAt: true,
+      participant: {
+        select: {
+          fullName: true,
+          nimNis: true,
+          division: true,
+          status: true,
+        },
+      },
+      evidences: {
+        select: {
+          id: true,
+          type: true,
+          capturedAt: true,
+        },
+      },
+      correctionLogs: {
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          previousStatus: true,
+          newStatus: true,
+          previousCheckInAt: true,
+          newCheckInAt: true,
+          previousCheckOutAt: true,
+          newCheckOutAt: true,
+          reason: true,
+          createdAt: true,
+          adminUser: {
+            select: {
+              id: true,
+              email: true,
+              username: true,
+            },
+          },
+        },
+      },
+    },
+  });
+}
+
+export async function findAttendanceEvidenceStorageKey(
+  attendanceId: string,
+  type: AttendanceEvidenceType,
+) {
+  return prisma.attendanceEvidence.findUnique({
+    where: {
+      attendanceId_type: {
+        attendanceId,
+        type,
+      },
+    },
+    select: {
+      storageKey: true,
+      mimeType: true,
+    },
   });
 }
