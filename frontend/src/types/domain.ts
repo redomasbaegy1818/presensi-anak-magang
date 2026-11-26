@@ -46,12 +46,23 @@ export interface SessionSummary {
 export interface AdminOverviewResponse {
   admin: AuthUser;
   timezone: string;
+  attendanceDate: string;
+  rules: {
+    checkInStartTime: string;
+    workStartTime: string;
+    lateToleranceMinutes: number;
+    workEndTime: string;
+    checkOutEndTime: string;
+  };
   summary: {
     activeParticipants: number;
+    attendedToday: number;
     presentToday: number;
     lateToday: number;
     notCheckedInToday: number;
+    checkedOutToday: number;
   };
+  recentAttendance: AttendanceRecordItem[];
   checkedAt: string;
 }
 
