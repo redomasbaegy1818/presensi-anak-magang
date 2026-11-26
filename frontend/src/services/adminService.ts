@@ -1,4 +1,7 @@
 import type {
+  AdminAttendanceDetailRecord,
+  AdminAttendanceListResponse,
+  AdminCorrectAttendancePayload,
   AdminParticipantDetailResponse,
   AdminParticipantsListResponse,
   AdminParticipantUpdatePayload,
@@ -69,4 +72,62 @@ export function updateAdminParticipantStatus(
       body: { status },
     },
   );
+}
+
+export interface AdminAttendanceFilterParams {
+  search?: string;
+  participantId?: string;
+  date?: string;
+  status?: 'ALL' | 'PRESENT' | 'LATE' | 'ABSENT';
+  page?: number;
+  limit?: number;
+}
+
+export function getAdminAttendance(
+  params: AdminAttendanceFilterParams = {},
+): Promise<AdminAttendanceListResponse> {
+  const qs = new URLSearchParams();
+  if (params.search?.trim()) qs.set('search', params.search.trim());
+  if (params.participantId && params.participantId !== 'ALL') {
+    qs.set('participantId', params.participantId);
+  }
+  if (params.date) qs.set('date', params.date);
+  if (params.status && params.status !== 'ALL') qs.set('status', params.status);
+  if (params.page) qs.set('page', String(params.page));
+  if (params.limit) qs.set('limit', String(params.limit));
+
+  const queryString = qs.toString();
+  return apiRequest<AdminAttendanceListResponse>(
+    `/admin/attendance${queryString ? `?${queryString}` : ''}`,
+  );
+}
+
+export function getAdminAttendanceDetail(
+  id: string,
+): Promise<{ record: AdminAttendanceDetailRecord }> {
+  return apiRequest<{ record: AdminAttendanceDetailRecord }>(
+    `/admin/attendance/${encodeURIComponent(id)}`,
+  );
+}
+
+export function correctAdminAttendance(
+  id: string,
+  payload: AdminCorrectAttendancePayload,
+): Promise<{ record: AdminAttendanceDetailRecord; message: string }> {
+  return apiRequest<{ record: AdminAttendanceDetailRecord; message: string }>(
+    `/admin/attendance/${encodeURIComponent(id)}/correct`,
+    {
+      method: 'PATCH',
+      body: payload,
+    },
+  );
+}
+
+export function getAdminEvidenceUrl(
+  attendanceId: string,
+  type: 'CHECK_IN' | 'CHECK_OUT',
+): string {
+  const base =
+    import.meta.env.VITE_API_BASE_URL?.replace(/\/+$/, '') || '/api/v1';
+  return `${base}/admin/attendance/${encodeURIComponent(attendanceId)}/evidence/${type}`;
 }

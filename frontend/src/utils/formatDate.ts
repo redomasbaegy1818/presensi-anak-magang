@@ -28,6 +28,20 @@ export function formatWaktuWib(isoString: string | null | undefined): string {
   return `${TIME_FORMATTER.format(date)} WIB`;
 }
 
+export function toWibHhMm(isoString: string | null | undefined): string {
+  if (!isoString) return '';
+  const date = new Date(isoString);
+  if (Number.isNaN(date.getTime())) return '';
+  return TIME_FORMATTER.format(date).replace('.', ':');
+}
+
+export function formatDateTimeWib(isoString: string | null | undefined): string {
+  if (!isoString) return '—';
+  const date = new Date(isoString);
+  if (Number.isNaN(date.getTime())) return '—';
+  return `${DATE_FORMATTER.format(date)}, ${TIME_FORMATTER.format(date)} WIB`;
+}
+
 export function formatParticipantStatus(status: 'ACTIVE' | 'INACTIVE'): string {
   return status === 'ACTIVE' ? 'Aktif' : 'Nonaktif';
 }

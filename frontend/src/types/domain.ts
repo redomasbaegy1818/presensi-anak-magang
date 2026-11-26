@@ -91,6 +91,66 @@ export interface AdminParticipantUpdatePayload {
   internshipEndDate: string;
 }
 
+export interface AdminAttendanceListItem extends AttendanceRecordItem {
+  correctionCount: number;
+  hasCheckInEvidence: boolean;
+  hasCheckOutEvidence: boolean;
+}
+
+export interface AdminAttendanceListResponse {
+  records: AdminAttendanceListItem[];
+  total: number;
+  page: number;
+  limit: number;
+  participantOptions: {
+    id: string;
+    fullName: string;
+    nimNis: string;
+  }[];
+}
+
+export interface AdminAttendanceCorrectionLog {
+  id: string;
+  previousStatus: AttendanceStatus | null;
+  newStatus: AttendanceStatus;
+  previousCheckInAt: string | null;
+  newCheckInAt: string | null;
+  previousCheckOutAt: string | null;
+  newCheckOutAt: string | null;
+  reason: string;
+  createdAt: string;
+  adminLabel: string;
+}
+
+export interface AdminAttendanceDetailRecord {
+  id: string;
+  participantId: string;
+  participantName: string;
+  nimNis: string;
+  division: string;
+  participantStatus: ParticipantStatus;
+  attendanceDate: string;
+  checkInAt: string | null;
+  checkOutAt: string | null;
+  status: AttendanceStatus;
+  verificationStatus: VerificationStatus;
+  isCorrected: boolean;
+  notes: string | null;
+  evidences: {
+    id: string;
+    type: 'CHECK_IN' | 'CHECK_OUT';
+    capturedAt: string;
+  }[];
+  correctionLogs: AdminAttendanceCorrectionLog[];
+}
+
+export interface AdminCorrectAttendancePayload {
+  status: AttendanceStatus;
+  checkInTime: string | null;
+  checkOutTime: string | null;
+  reason: string;
+}
+
 export type ParticipantStatus = 'ACTIVE' | 'INACTIVE';
 
 export type AttendanceStatus = 'PRESENT' | 'LATE' | 'ABSENT';
