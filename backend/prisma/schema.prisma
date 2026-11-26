@@ -6,3 +6,177 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+enum UserRole {
+  ADMIN
+  PARTICIPANT
+}
+
+enum ParticipantStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum AttendanceStatus {
+  PRESENT
+  LATE
+  ABSENT
+}
+
+enum VerificationStatus {
+  VERIFIED
+  FAILED
+  MANUAL_OVERRIDE
+}
+
+enum AttendanceEvidenceType {
+  CHECK_IN
+  CHECK_OUT
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  username     String?   @unique
+  passwordHash String
+  role         UserRole
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  participant     Participant?
+  sessions        Session[]
+  corrections     AttendanceCorrectionLog[]
+  updatedSettings AttendanceSetting[]
+
+  @@index([role, isActive])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Participant {
+  id                  String            @id @default(cuid())
+  userId              String            @unique
+  fullName            String
+  nimNis              String            @unique
+  universitySchool    String
+  major               String
+  division            String
+  phone               String
+  internshipStartDate DateTime          @db.Date
+  internshipEndDate   DateTime          @db.Date
+  status              ParticipantStatus @default(ACTIVE)
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Restrict)
+  faceTemplate FaceTemplate?
+  attendances  Attendance[]
+
+  @@index([status])
+  @@index([division])
+  @@index([fullName])
+}
+
+model FaceTemplate {
+  id                 String   @id @default(cuid())
+  participantId      String   @unique
+  encryptedEmbedding String
+  encryptionIv       String
+  encryptionAuthTag  String
+  detectorName       String
+  modelName          String
+  embeddingDim       Int
+  qualityScore       Float?
+  registeredAt       DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  participant Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+}
+
+model Attendance {
+  id                 String             @id @default(cuid())
+  participantId      String
+  attendanceDate     DateTime           @db.Date
+  checkInAt          DateTime?
+  checkOutAt         DateTime?
+  status             AttendanceStatus
+  verificationStatus VerificationStatus
+  verificationScore  Float?
+  isCorrected        Boolean            @default(false)
+  notes              String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  participant    Participant               @relation(fields: [participantId], references: [id], onDelete: Restrict)
+  evidences      AttendanceEvidence[]
+  correctionLogs AttendanceCorrectionLog[]
+
+  @@unique([participantId, attendanceDate])
+  @@index([attendanceDate])
+  @@index([status])
+}
+
+model AttendanceEvidence {
+  id            String                 @id @default(cuid())
+  attendanceId  String
+  type          AttendanceEvidenceType
+  storageKey    String
+  mimeType      String
+  fileSizeBytes Int
+  capturedAt    DateTime               @default(now())
+
+  attendance Attendance @relation(fields: [attendanceId], references: [id], onDelete: Cascade)
+
+  @@unique([attendanceId, type])
+  @@index([capturedAt])
+}
+
+model AttendanceSetting {
+  id                   Int      @id @default(1)
+  checkInStartTime     String   @default("06:00")
+  workStartTime        String   @default("08:00")
+  lateToleranceMinutes Int      @default(15)
+  workEndTime          String   @default("17:00")
+  checkOutEndTime      String   @default("21:00")
+  faceMatchThreshold   Float    @default(0.50)
+  saveEvidence         Boolean  @default(true)
+  updatedById          String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  updatedBy User? @relation(fields: [updatedById], references: [id], onDelete: SetNull)
+}
+
+model AttendanceCorrectionLog {
+  id                 String            @id @default(cuid())
+  attendanceId       String
+  adminUserId        String
+  previousStatus     AttendanceStatus?
+  newStatus          AttendanceStatus
+  previousCheckInAt  DateTime?
+  newCheckInAt       DateTime?
+  previousCheckOutAt DateTime?
+  newCheckOutAt      DateTime?
+  reason             String
+  createdAt          DateTime          @default(now())
+
+  attendance Attendance @relation(fields: [attendanceId], references: [id], onDelete: Restrict)
+  adminUser  User       @relation(fields: [adminUserId], references: [id], onDelete: Restrict)
+
+  @@index([attendanceId])
+  @@index([adminUserId])
+  @@index([createdAt])
+}
