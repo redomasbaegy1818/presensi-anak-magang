@@ -4,25 +4,88 @@ import {
   ParticipantLayout,
   type NavItem,
 } from '../components/layout/index.ts';
+import {
+  IconBarChart,
+  IconCamera,
+  IconClipboardCheck,
+  IconClock,
+  IconDashboard,
+  IconSettings,
+  IconUser,
+  IconUsers,
+} from '../components/ui/index.ts';
 import { useAuth } from '../hooks/useAuth.ts';
 
 const PARTICIPANT_NAV_CONFIG = [
-  { id: 'presensi', label: 'Presensi', href: '/peserta/presensi' },
-  { id: 'riwayat', label: 'Riwayat', href: '/peserta/riwayat' },
-  { id: 'profil', label: 'Profil', href: '/peserta/profil' },
+  {
+    id: 'presensi',
+    label: 'Presensi',
+    href: '/peserta/presensi',
+    icon: <IconCamera className="size-4" />,
+  },
+  {
+    id: 'izin',
+    label: 'Izin',
+    href: '/peserta/izin',
+    icon: <IconClipboardCheck className="size-4" />,
+  },
+  {
+    id: 'riwayat',
+    label: 'Riwayat',
+    href: '/peserta/riwayat',
+    icon: <IconClock className="size-4" />,
+  },
+  {
+    id: 'profil',
+    label: 'Profil',
+    href: '/peserta/profil',
+    icon: <IconUser className="size-4" />,
+  },
 ];
 
 const ADMIN_NAV_CONFIG = [
-  { id: 'dashboard', label: 'Ringkasan', href: '/admin/dashboard' },
-  { id: 'peserta', label: 'Peserta Magang', href: '/admin/peserta' },
-  { id: 'presensi', label: 'Data Presensi', href: '/admin/presensi' },
-  { id: 'laporan', label: 'Laporan', href: '/admin/laporan' },
-  { id: 'pengaturan', label: 'Pengaturan', href: '/admin/pengaturan' },
+  {
+    id: 'dashboard',
+    label: 'Ringkasan',
+    href: '/admin/dashboard',
+    icon: <IconDashboard className="size-4" />,
+  },
+  {
+    id: 'peserta',
+    label: 'Peserta Magang',
+    href: '/admin/peserta',
+    icon: <IconUsers className="size-4" />,
+  },
+  {
+    id: 'presensi',
+    label: 'Data Presensi',
+    href: '/admin/presensi',
+    icon: <IconClipboardCheck className="size-4" />,
+  },
+  {
+    id: 'izin',
+    label: 'Pengajuan Izin',
+    href: '/admin/izin',
+    icon: <IconClock className="size-4" />,
+  },
+  {
+    id: 'laporan',
+    label: 'Laporan',
+    href: '/admin/laporan',
+    icon: <IconBarChart className="size-4" />,
+  },
+  {
+    id: 'pengaturan',
+    label: 'Pengaturan',
+    href: '/admin/pengaturan',
+    icon: <IconSettings className="size-4" />,
+  },
 ];
 
 function getParticipantPageTitle(pathname: string): string {
   if (pathname.startsWith('/peserta/daftar-wajah')) return 'Pendaftaran Wajah';
   if (pathname.startsWith('/peserta/hasil-presensi')) return 'Hasil Presensi';
+  if (pathname.startsWith('/peserta/izin')) return 'Pengajuan Izin';
   if (pathname.startsWith('/peserta/riwayat')) return 'Riwayat Presensi';
   if (pathname.startsWith('/peserta/profil')) return 'Profil Peserta';
   return 'Presensi Harian';
@@ -32,6 +95,7 @@ function getAdminPageTitle(pathname: string): string {
   if (pathname.startsWith('/admin/peserta/')) return 'Detail Peserta Magang';
   if (pathname.startsWith('/admin/peserta')) return 'Peserta Magang';
   if (pathname.startsWith('/admin/presensi')) return 'Data Presensi';
+  if (pathname.startsWith('/admin/izin')) return 'Pengajuan Izin';
   if (pathname.startsWith('/admin/laporan')) return 'Laporan Kehadiran';
   if (pathname.startsWith('/admin/pengaturan')) return 'Pengaturan Presensi';
   return 'Ringkasan Hari Ini';

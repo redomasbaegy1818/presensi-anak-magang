@@ -15,8 +15,16 @@ export interface AuthContextValue {
   user: AuthUser | null;
   status: AuthStatus;
   sessionError: string | null;
-  loginAdmin: (identifier: string, password: string) => Promise<AuthUser>;
-  loginParticipant: (email: string, password: string) => Promise<AuthUser>;
+  loginAdmin: (
+    identifier: string,
+    password: string,
+    rememberMe?: boolean,
+  ) => Promise<AuthUser>;
+  loginParticipant: (
+    email: string,
+    password: string,
+    rememberMe?: boolean,
+  ) => Promise<AuthUser>;
   registerParticipant: (
     payload: ParticipantRegistrationPayload,
   ) => Promise<ParticipantRegisterResponse>;

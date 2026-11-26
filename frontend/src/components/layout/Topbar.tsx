@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 import { Button } from '../ui/Button.tsx';
+import { IconHelpCircle, IconLogout } from '../ui/Icons.tsx';
+import { UserAvatar } from '../ui/UserAvatar.tsx';
 
 export interface TopbarProps {
   title: string;
@@ -7,6 +9,7 @@ export interface TopbarProps {
   userRoleLabel?: string;
   onMenuClick?: () => void;
   menuExpanded?: boolean;
+  onHelpClick?: () => void;
   onLogout?: () => void;
   rightSlot?: ReactNode;
 }
@@ -17,6 +20,7 @@ export function Topbar({
   userRoleLabel,
   onMenuClick,
   menuExpanded,
+  onHelpClick,
   onLogout,
   rightSlot,
 }: TopbarProps) {
@@ -53,25 +57,35 @@ export function Topbar({
         </p>
       </div>
 
-      <div className="flex items-center gap-3 shrink-0">
+      <div className="flex items-center gap-2.5 shrink-0">
         {rightSlot}
+        {onHelpClick && (
+          <Button variant="ghost" size="sm" onClick={onHelpClick}>
+            <IconHelpCircle className="size-4" />
+            <span className="hidden sm:inline">Panduan</span>
+          </Button>
+        )}
         {(userName || userRoleLabel) && (
-          <div className="hidden sm:block text-right leading-tight">
-            {userName && (
-              <p className="text-sm font-medium text-[var(--color-text-primary)]">
-                {userName}
-              </p>
-            )}
-            {userRoleLabel && (
-              <p className="text-xs text-[var(--color-text-muted)]">
-                {userRoleLabel}
-              </p>
-            )}
+          <div className="hidden sm:flex items-center gap-2.5">
+            <UserAvatar name={userName} size="sm" />
+            <div className="text-right leading-tight">
+              {userName && (
+                <p className="text-sm font-medium text-[var(--color-text-primary)]">
+                  {userName}
+                </p>
+              )}
+              {userRoleLabel && (
+                <p className="text-xs text-[var(--color-text-muted)]">
+                  {userRoleLabel}
+                </p>
+              )}
+            </div>
           </div>
         )}
         {onLogout && (
           <Button variant="secondary" size="sm" onClick={onLogout}>
-            Keluar
+            <IconLogout className="size-3.5" />
+            <span>Keluar</span>
           </Button>
         )}
       </div>

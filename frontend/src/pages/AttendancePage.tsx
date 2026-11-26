@@ -11,6 +11,7 @@ import {
   Button,
   EmptyState,
   ErrorState,
+  LiveWibClock,
   LoadingState,
 } from '../components/ui/index.ts';
 import { useAuth } from '../hooks/useAuth.ts';
@@ -144,6 +145,52 @@ export default function AttendancePage() {
           }
         />
       </section>
+    );
+  }
+
+  if (today.todayPermission?.status === 'APPROVED') {
+    const perm = today.todayPermission;
+    return (
+      <div className="space-y-4 animate-panel-enter">
+        <Alert tone="info" title="Izin Disetujui Untuk Hari Ini">
+          Pengajuan {perm.type === 'SAKIT' ? 'sakit' : 'izin'} Anda pada{' '}
+          {formatTanggalId(today.attendanceDate)} telah disetujui, sehingga Anda
+          tidak perlu melakukan presensi wajah hari ini.
+        </Alert>
+
+        <section className="bg-white border border-[var(--color-border)] rounded-[var(--radius-md)] shadow-[var(--shadow-sm)] p-5 space-y-3">
+          <div className="flex items-center justify-between gap-2 pb-3 border-b border-[var(--color-bg-subtle)]">
+            <h2 className="text-base font-semibold text-[var(--color-text-primary)]">
+              Rincian Izin Aktif
+            </h2>
+            <Badge tone="success">Disetujui</Badge>
+          </div>
+          <p className="text-sm text-[var(--color-text-secondary)]">
+            <strong>Keterangan:</strong> {perm.reason}
+          </p>
+          {perm.adminNote && (
+            <p className="text-sm text-[var(--color-text-secondary)]">
+              <strong>Catatan Admin:</strong> {perm.adminNote}
+            </p>
+          )}
+          <div className="flex flex-wrap gap-2 pt-1">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => navigate('/peserta/izin')}
+            >
+              Lihat Pengajuan Izin
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate('/peserta/riwayat')}
+            >
+              Riwayat Presensi
+            </Button>
+          </div>
+        </section>
+      </div>
     );
   }
 
@@ -295,22 +342,48 @@ export default function AttendancePage() {
   };
 
   return (
-    <div className="space-y-4">
-      <section className="bg-white border border-[var(--color-border)] rounded-[var(--radius-md)] p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div className="space-y-1">
-          <p className="text-xs text-[var(--color-text-muted)]">
-            {formatTanggalId(today.attendanceDate)} · Masuk{' '}
-            {today.rules.workStartTime} (Toleransi{' '}
-            {today.rules.lateToleranceMinutes} menit) · Pulang{' '}
-            {today.rules.workEndTime} WIB
-          </p>
+    <div className="space-y-4 animate-panel-enter">
+      {today.todayPermission?.status === 'PENDING' && (
+        <Alert
+          tone="info"
+          title="Pengajuan Izin Sedang Menunggu Persetujuan"
+          action={
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => navigate('/peserta/izin')}
+            >
+              Pantau Izin
+            </Button>
+          }
+        >
+          Anda memiliki pengajuan{' '}
+          {today.todayPermission.type === 'SAKIT' ? 'sakit' : 'izin'} untuk
+          hari ini. Apabila Anda tetap hadir ke kantor, Anda masih dapat
+          melakukan presensi di bawah.
+        </Alert>
+      )}
+
+      <section className="bg-white border border-[var(--color-border)] rounded-[var(--radius-md)] shadow-[var(--shadow-sm)] p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="space-y-1.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <LiveWibClock />
+            <span className="text-xs text-[var(--color-text-muted)]">
+              {formatTanggalId(today.attendanceDate)}
+            </span>
+          </div>
           <div className="flex items-center justify-between gap-2">
             <span className="text-sm font-semibold text-[var(--color-text-primary)]">
               {actionLabel}
             </span>
           </div>
+          <p className="text-xs text-[var(--color-text-secondary)]">
+            Masuk {today.rules.workStartTime} WIB (toleransi{' '}
+            {today.rules.lateToleranceMinutes} menit) · Pulang{' '}
+            {today.rules.workEndTime} WIB
+          </p>
           {today.todayRecord?.checkInAt && (
-            <p className="text-xs text-[var(--color-text-secondary)] tabular-nums">
+            <p className="text-xs text-[var(--color-success)] font-medium tabular-nums">
               Jam masuk tercatat: {formatWaktuWib(today.todayRecord.checkInAt)}
             </p>
           )}
@@ -348,6 +421,24 @@ export default function AttendancePage() {
           />
         }
       />
+
+      <details className="rounded-[var(--radius-md)] bg-white border border-[var(--color-border)] px-4 py-2.5 text-xs text-[var(--color-text-secondary)]">
+        <summary className="font-medium text-[var(--color-text-primary)] cursor-pointer select-none">
+          Butuh bantuan presensi atau kamera bermasalah?
+        </summary>
+        <ul className="mt-2 list-disc pl-4 space-y-1 leading-relaxed">
+          <li>
+            Pastikan Anda menekan tombol saat jam layanan aktif (sesuai jadwal di atas).
+          </li>
+          <li>
+            Jika verifikasi gagal berulang kali, perbaiki pencahayaan atau perbarui foto
+            wajah di menu <strong>Profil → Perbarui Data Wajah</strong>.
+          </li>
+          <li>
+            Jika kamera diblokir, klik ikon kamera/gembok di browser lalu pilih Izinkan.
+          </li>
+        </ul>
+      </details>
     </div>
   );
 }

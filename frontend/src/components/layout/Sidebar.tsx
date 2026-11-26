@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { BrandLogo } from '../ui/BrandLogo.tsx';
 
 export interface NavItem {
   id: string;
@@ -19,7 +20,7 @@ export interface SidebarProps {
 
 export function Sidebar({
   brandTitle = 'Presensi Magang',
-  brandSubtitle = 'Surakarta',
+  brandSubtitle = 'Verifikasi Wajah',
   items,
   onNavigate,
   mobileOpen = false,
@@ -29,10 +30,7 @@ export function Sidebar({
     <div className="flex h-full flex-col bg-white border-r border-[var(--color-border)]">
       <div className="h-[var(--topbar-height)] flex items-center justify-between px-4 border-b border-[var(--color-border)]">
         <div className="flex items-center gap-2.5">
-          <span
-            aria-hidden="true"
-            className="inline-block w-2 h-6 rounded-[2px] bg-[var(--color-accent)]"
-          />
+          <BrandLogo size="sm" />
           <div>
             <p className="text-sm font-semibold text-[var(--color-text-primary)] leading-tight">
               {brandTitle}
@@ -77,10 +75,10 @@ export function Sidebar({
                   }
                 }}
                 className={[
-                  'flex items-center gap-2.5 min-h-10 px-3 py-2 rounded-[var(--radius-md)] text-sm border-l-3 transition-colors',
+                  'flex items-center gap-2.5 min-h-10 px-3 py-2 rounded-[var(--radius-md)] text-sm border-l-3 transition-all duration-150',
                   item.active
                     ? 'border-[var(--color-accent)] bg-[var(--color-accent-subtle)] text-[var(--color-accent-text)] font-semibold'
-                    : 'border-transparent text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-subtle)] hover:text-[var(--color-text-primary)] font-medium',
+                    : 'border-transparent text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-subtle)] hover:text-[var(--color-text-primary)] hover:translate-x-0.5 font-medium',
                 ].join(' ')}
               >
                 {item.icon && (

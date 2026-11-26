@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Alert,
   Badge,
@@ -9,6 +9,7 @@ import {
   ErrorState,
   Input,
   Modal,
+  Pagination,
   Select,
   type TableColumn,
 } from '../components/ui/index.ts';
@@ -41,20 +42,29 @@ const FACE_OPTIONS = [
 export default function AdminParticipantsPage() {
   usePageTitle('Peserta Magang');
   const navigate = useNavigate();
+  const location = useLocation();
   const { clearAuthenticatedUser } = useAuth();
+
+  const initialBanner =
+    (location.state as { feedbackBanner?: string } | null)?.feedbackBanner ??
+    null;
 
   const [searchInput, setSearchInput] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
   const [divisionFilter, setDivisionFilter] = useState('ALL');
   const [faceFilter, setFaceFilter] = useState<'ALL' | 'REGISTERED' | 'UNREGISTERED'>('ALL');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
   const [rows, setRows] = useState<ParticipantProfile[]>([]);
   const [total, setTotal] = useState(0);
   const [divisions, setDivisions] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [feedbackBanner, setFeedbackBanner] = useState<string | null>(null);
+  const [feedbackBanner, setFeedbackBanner] = useState<string | null>(
+    initialBanner,
+  );
 
   const [editingParticipant, setEditingParticipant] =
     useState<ParticipantProfile | null>(null);
@@ -74,6 +84,7 @@ export default function AdminParticipantsPage() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchInput.trim());
+      setPage(1);
     }, 250);
     return () => clearTimeout(timer);
   }, [searchInput]);
@@ -88,7 +99,8 @@ export default function AdminParticipantsPage() {
         status: statusFilter,
         division: divisionFilter,
         faceStatus: faceFilter,
-        limit: 50,
+        page,
+        limit: pageSize,
       });
       setRows(res.participants);
       setTotal(res.total);
@@ -106,7 +118,15 @@ export default function AdminParticipantsPage() {
     } finally {
       setLoading(false);
     }
-  }, [debouncedSearch, statusFilter, divisionFilter, faceFilter, handleUnauthorized]);
+  }, [
+    debouncedSearch,
+    statusFilter,
+    divisionFilter,
+    faceFilter,
+    page,
+    pageSize,
+    handleUnauthorized,
+  ]);
 
   useEffect(() => {
     void fetchParticipants();
@@ -124,6 +144,7 @@ export default function AdminParticipantsPage() {
     setStatusFilter('ALL');
     setDivisionFilter('ALL');
     setFaceFilter('ALL');
+    setPage(1);
   };
 
   const handleConfirmStatusChange = async () => {
@@ -294,9 +315,10 @@ export default function AdminParticipantsPage() {
             <Select
               label="Status"
               value={statusFilter}
-              onChange={(e) =>
-                setStatusFilter(e.target.value as 'ALL' | 'ACTIVE' | 'INACTIVE')
-              }
+              onChange={(e) => {
+                setStatusFilter(e.target.value as 'ALL' | 'ACTIVE' | 'INACTIVE');
+                setPage(1);
+              }}
               options={STATUS_OPTIONS}
             />
           </div>
@@ -304,7 +326,10 @@ export default function AdminParticipantsPage() {
             <Select
               label="Divisi"
               value={divisionFilter}
-              onChange={(e) => setDivisionFilter(e.target.value)}
+              onChange={(e) => {
+                setDivisionFilter(e.target.value);
+                setPage(1);
+              }}
               options={divisionOptions}
             />
           </div>
@@ -312,11 +337,12 @@ export default function AdminParticipantsPage() {
             <Select
               label="Wajah"
               value={faceFilter}
-              onChange={(e) =>
+              onChange={(e) => {
                 setFaceFilter(
                   e.target.value as 'ALL' | 'REGISTERED' | 'UNREGISTERED',
-                )
-              }
+                );
+                setPage(1);
+              }}
               options={FACE_OPTIONS}
             />
           </div>
@@ -350,15 +376,30 @@ export default function AdminParticipantsPage() {
           />
         </div>
       ) : (
-        <DataTable
-          caption="Daftar peserta magang"
-          columns={columns}
-          rows={rows}
-          loading={loading}
-          getRowKey={(row) => row.id}
-          emptyTitle="Belum ada peserta magang"
-          emptyDescription="Peserta yang telah mendaftar di sistem akan tampil pada tabel ini."
-        />
+        <div className="space-y-3">
+          <DataTable
+            caption="Daftar peserta magang"
+            columns={columns}
+            rows={rows}
+            loading={loading}
+            getRowKey={(row) => row.id}
+            emptyTitle="Belum ada peserta magang"
+            emptyDescription="Peserta yang telah mendaftar di sistem akan tampil pada tabel ini."
+          />
+
+          <Pagination
+            page={page}
+            pageSize={pageSize}
+            totalItems={total}
+            loading={loading}
+            itemLabel="peserta"
+            onPageChange={setPage}
+            onPageSizeChange={(nextSize) => {
+              setPageSize(nextSize);
+              setPage(1);
+            }}
+          />
+        </div>
       )}
 
       <ParticipantEditModal

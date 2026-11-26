@@ -3,9 +3,11 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { LoadingState } from '../components/ui/index.ts';
 import { AuthProvider } from '../context/AuthContext.tsx';
 import AdminLoginPage from '../pages/AdminLoginPage.tsx';
+import ForgotPasswordPage from '../pages/ForgotPasswordPage.tsx';
 import LoginPage from '../pages/LoginPage.tsx';
 import NotFoundPage from '../pages/NotFoundPage.tsx';
 import RegisterPage from '../pages/RegisterPage.tsx';
+import ResetPasswordPage from '../pages/ResetPasswordPage.tsx';
 import { ProtectedAdminRoute } from './ProtectedAdminRoute.tsx';
 import { ProtectedParticipantRoute } from './ProtectedParticipantRoute.tsx';
 import { AdminShellRoute, ParticipantShellRoute } from './ShellRoutes.tsx';
@@ -19,6 +21,9 @@ const AttendanceResultPage = lazy(
 );
 const AttendanceHistoryPage = lazy(
   () => import('../pages/AttendanceHistoryPage.tsx'),
+);
+const ParticipantPermissionsPage = lazy(
+  () => import('../pages/ParticipantPermissionsPage.tsx'),
 );
 const ParticipantProfilePage = lazy(
   () => import('../pages/ParticipantProfilePage.tsx'),
@@ -35,6 +40,9 @@ const AdminParticipantDetailPage = lazy(
 );
 const AdminAttendancePage = lazy(
   () => import('../pages/AdminAttendancePage.tsx'),
+);
+const AdminPermissionsPage = lazy(
+  () => import('../pages/AdminPermissionsPage.tsx'),
 );
 const AdminReportsPage = lazy(() => import('../pages/AdminReportsPage.tsx'));
 const AdminSettingsPage = lazy(() => import('../pages/AdminSettingsPage.tsx'));
@@ -56,6 +64,8 @@ export function AppRouter() {
             <Route path="/" element={<Navigate to="/masuk" replace />} />
             <Route path="/masuk" element={<LoginPage />} />
             <Route path="/daftar" element={<RegisterPage />} />
+            <Route path="/lupa-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
 
             <Route element={<ProtectedParticipantRoute />}>
               <Route path="/peserta" element={<ParticipantShellRoute />}>
@@ -69,6 +79,7 @@ export function AppRouter() {
                   path="hasil-presensi"
                   element={<AttendanceResultPage />}
                 />
+                <Route path="izin" element={<ParticipantPermissionsPage />} />
                 <Route path="riwayat" element={<AttendanceHistoryPage />} />
                 <Route path="profil" element={<ParticipantProfilePage />} />
               </Route>
@@ -88,6 +99,7 @@ export function AppRouter() {
                   element={<AdminParticipantDetailPage />}
                 />
                 <Route path="presensi" element={<AdminAttendancePage />} />
+                <Route path="izin" element={<AdminPermissionsPage />} />
                 <Route path="laporan" element={<AdminReportsPage />} />
                 <Route path="pengaturan" element={<AdminSettingsPage />} />
               </Route>

@@ -10,6 +10,7 @@ import {
   Input,
   LoadingState,
   Modal,
+  Pagination,
   Select,
   Textarea,
   type TableColumn,
@@ -50,8 +51,6 @@ const CORRECTION_STATUS_OPTIONS = [
   { value: 'ABSENT', label: 'Tidak Hadir' },
 ];
 
-const PAGE_LIMIT = 20;
-
 export default function AdminAttendancePage() {
   usePageTitle('Data Presensi');
   const navigate = useNavigate();
@@ -63,6 +62,7 @@ export default function AdminAttendancePage() {
   const [participantFilter, setParticipantFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState<'ALL' | AttendanceStatus>('ALL');
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
   const [rows, setRows] = useState<AdminAttendanceListItem[]>([]);
   const [total, setTotal] = useState(0);
@@ -116,7 +116,7 @@ export default function AdminAttendancePage() {
         date: dateFilter || undefined,
         status: statusFilter,
         page,
-        limit: PAGE_LIMIT,
+        limit: pageSize,
       });
       setRows(res.records);
       setTotal(res.total);
@@ -140,6 +140,7 @@ export default function AdminAttendancePage() {
     dateFilter,
     statusFilter,
     page,
+    pageSize,
     handleUnauthorized,
   ]);
 
@@ -244,8 +245,6 @@ export default function AdminAttendancePage() {
     setStatusFilter('ALL');
     setPage(1);
   };
-
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_LIMIT));
 
   const participantSelectOptions = [
     { value: 'ALL', label: 'Semua Peserta' },
@@ -478,31 +477,18 @@ export default function AdminAttendancePage() {
         />
       )}
 
-      {total > PAGE_LIMIT && (
-        <div className="flex items-center justify-between gap-3 text-sm">
-          <p className="text-xs text-[var(--color-text-secondary)] tabular-nums">
-            Halaman {page} dari {totalPages}
-          </p>
-          <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              variant="secondary"
-              disabled={page <= 1 || loading}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-            >
-              Sebelumnya
-            </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              disabled={page >= totalPages || loading}
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            >
-              Berikutnya
-            </Button>
-          </div>
-        </div>
-      )}
+      <Pagination
+        page={page}
+        pageSize={pageSize}
+        totalItems={total}
+        loading={loading}
+        itemLabel="catatan presensi"
+        onPageChange={setPage}
+        onPageSizeChange={(nextSize) => {
+          setPageSize(nextSize);
+          setPage(1);
+        }}
+      />
 
       {/* Inspection Modal */}
       <Modal

@@ -92,27 +92,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const loginAdmin = useCallback(async (identifier: string, password: string) => {
-    const res = await loginAdminRequest(identifier, password);
-    if (!res.authenticated || !res.user) {
-      throw new Error('Gagal memulai sesi admin.');
-    }
-    setSessionError(null);
-    setUser(res.user);
-    setStatus('authenticated');
-    return res.user;
-  }, []);
+  const loginAdmin = useCallback(
+    async (identifier: string, password: string, rememberMe = false) => {
+      const res = await loginAdminRequest(identifier, password, rememberMe);
+      if (!res.authenticated || !res.user) {
+        throw new Error('Gagal memulai sesi admin.');
+      }
+      setSessionError(null);
+      setUser(res.user);
+      setStatus('authenticated');
+      return res.user;
+    },
+    [],
+  );
 
-  const loginParticipant = useCallback(async (email: string, password: string) => {
-    const res = await loginParticipantRequest(email, password);
-    if (!res.authenticated || !res.user) {
-      throw new Error('Gagal memulai sesi peserta.');
-    }
-    setSessionError(null);
-    setUser(res.user);
-    setStatus('authenticated');
-    return res.user;
-  }, []);
+  const loginParticipant = useCallback(
+    async (email: string, password: string, rememberMe = false) => {
+      const res = await loginParticipantRequest(email, password, rememberMe);
+      if (!res.authenticated || !res.user) {
+        throw new Error('Gagal memulai sesi peserta.');
+      }
+      setSessionError(null);
+      setUser(res.user);
+      setStatus('authenticated');
+      return res.user;
+    },
+    [],
+  );
 
   const registerParticipant = useCallback(
     async (payload: ParticipantRegistrationPayload) => {

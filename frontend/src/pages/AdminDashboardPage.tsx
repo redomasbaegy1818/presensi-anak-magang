@@ -6,6 +6,11 @@ import {
   Button,
   DataTable,
   ErrorState,
+  IconAlertCircle,
+  IconCheckCircle,
+  IconClock,
+  IconUsers,
+  LiveWibClock,
   LoadingState,
   type TableColumn,
 } from '../components/ui/index.ts';
@@ -159,14 +164,26 @@ export default function AdminDashboardPage() {
   }
 
   const { summary, rules } = overview;
+  const totalComposition = Math.max(
+    1,
+    summary.presentToday + summary.lateToday + summary.notCheckedInToday,
+  );
+  const presentPct = Math.round(
+    (summary.presentToday / totalComposition) * 100,
+  );
+  const latePct = Math.round((summary.lateToday / totalComposition) * 100);
+  const pendingPct = Math.max(0, 100 - presentPct - latePct);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-panel-enter">
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold text-[var(--color-text-primary)]">
-            Ringkasan Kehadiran — {formatTanggalId(overview.attendanceDate)}
-          </h1>
+        <div className="space-y-1">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <h1 className="text-xl font-semibold text-[var(--color-text-primary)]">
+              Ringkasan Kehadiran — {formatTanggalId(overview.attendanceDate)}
+            </h1>
+            <LiveWibClock />
+          </div>
           <p className="text-sm text-[var(--color-text-secondary)]">
             Aturan aktif: Masuk {rules.workStartTime} WIB (toleransi{' '}
             {rules.lateToleranceMinutes} menit) · Pulang {rules.workEndTime} WIB.
@@ -180,6 +197,16 @@ export default function AdminDashboardPage() {
             onClick={() => void loadDashboard()}
           >
             Muat Ulang
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => navigate('/admin/izin')}
+          >
+            Pengajuan Izin
+            {summary.pendingPermissions > 0
+              ? ` (${summary.pendingPermissions})`
+              : ''}
           </Button>
           <Button
             variant="secondary"
@@ -206,57 +233,135 @@ export default function AdminDashboardPage() {
         </Alert>
       )}
 
+      {summary.pendingPermissions > 0 && (
+        <Alert
+          tone="info"
+          title={`${summary.pendingPermissions} Pengajuan Izin Menunggu Peninjauan`}
+          action={
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => navigate('/admin/izin')}
+            >
+              Tinjau Izin
+            </Button>
+          }
+        >
+          {overview.recentPermissions.length > 0
+            ? `Terbaru: ${overview.recentPermissions
+                .slice(0, 3)
+                .map((item) => item.participantName)
+                .join(', ')}.`
+            : 'Periksa daftar permohonan izin peserta pada halaman Pengajuan Izin.'}
+        </Alert>
+      )}
+
       <section
         aria-label="Ringkasan Kehadiran Hari Ini"
-        className="grid grid-cols-2 lg:grid-cols-4 bg-white border border-[var(--color-border)] rounded-[var(--radius-md)] divide-y lg:divide-y-0 lg:divide-x divide-[var(--color-border)]"
+        className="bg-white border border-[var(--color-border)] rounded-[var(--radius-md)] shadow-[var(--shadow-sm)] overflow-hidden"
       >
-        <div className="p-4">
-          <p className="text-xs font-medium text-[var(--color-text-secondary)]">
-            Peserta Aktif
-          </p>
-          <p className="text-2xl font-semibold tabular-nums text-[var(--color-text-primary)] mt-1">
-            {summary.activeParticipants}
-          </p>
-          <p className="text-xs text-[var(--color-text-muted)] mt-1">
-            Total peserta berstatus aktif
-          </p>
+        <div className="grid grid-cols-2 lg:grid-cols-4 divide-y lg:divide-y-0 lg:divide-x divide-[var(--color-border)]">
+          <div className="p-4 hover:bg-slate-50/70 transition-colors">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs font-medium text-[var(--color-text-secondary)]">
+                Peserta Aktif
+              </p>
+              <span className="inline-flex size-7 items-center justify-center rounded-full bg-[var(--color-accent-subtle)] text-[var(--color-accent-text)]">
+                <IconUsers className="size-3.5" />
+              </span>
+            </div>
+            <p className="text-2xl font-semibold tabular-nums text-[var(--color-text-primary)] mt-1">
+              {summary.activeParticipants}
+            </p>
+            <p className="text-xs text-[var(--color-text-muted)] mt-1">
+              Total peserta berstatus aktif
+            </p>
+          </div>
+
+          <div className="p-4 hover:bg-slate-50/70 transition-colors">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs font-medium text-[var(--color-text-secondary)]">
+                Sudah Presensi Hari Ini
+              </p>
+              <span className="inline-flex size-7 items-center justify-center rounded-full bg-[var(--color-success-bg)] text-[var(--color-success)]">
+                <IconCheckCircle className="size-3.5" />
+              </span>
+            </div>
+            <p className="text-2xl font-semibold tabular-nums text-[var(--color-success)] mt-1">
+              {summary.attendedToday}
+            </p>
+            <p className="text-xs text-[var(--color-text-muted)] mt-1 tabular-nums">
+              {summary.presentToday} tepat waktu · {summary.checkedOutToday} sudah pulang
+            </p>
+          </div>
+
+          <div className="p-4 hover:bg-slate-50/70 transition-colors">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs font-medium text-[var(--color-text-secondary)]">
+                Terlambat
+              </p>
+              <span className="inline-flex size-7 items-center justify-center rounded-full bg-[var(--color-warning-bg)] text-[var(--color-warning)]">
+                <IconClock className="size-3.5" />
+              </span>
+            </div>
+            <p className="text-2xl font-semibold tabular-nums text-[var(--color-warning)] mt-1">
+              {summary.lateToday}
+            </p>
+            <p className="text-xs text-[var(--color-text-muted)] mt-1">
+              Melewati batas toleransi masuk
+            </p>
+          </div>
+
+          <div className="p-4 hover:bg-slate-50/70 transition-colors">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs font-medium text-[var(--color-text-secondary)]">
+                Belum Presensi
+              </p>
+              <span className="inline-flex size-7 items-center justify-center rounded-full bg-[var(--color-bg-subtle)] text-[var(--color-text-secondary)]">
+                <IconAlertCircle className="size-3.5" />
+              </span>
+            </div>
+            <p className="text-2xl font-semibold tabular-nums text-[var(--color-text-primary)] mt-1">
+              {summary.notCheckedInToday}
+            </p>
+            <p className="text-xs text-[var(--color-text-muted)] mt-1">
+              {summary.excusedToday > 0
+                ? `${summary.excusedToday} izin tercatat hari ini`
+                : 'Peserta aktif belum check-in'}
+            </p>
+          </div>
         </div>
 
-        <div className="p-4">
-          <p className="text-xs font-medium text-[var(--color-text-secondary)]">
-            Sudah Presensi Hari Ini
-          </p>
-          <p className="text-2xl font-semibold tabular-nums text-[var(--color-success)] mt-1">
-            {summary.attendedToday}
-          </p>
-          <p className="text-xs text-[var(--color-text-muted)] mt-1 tabular-nums">
-            {summary.presentToday} tepat waktu · {summary.checkedOutToday} sudah pulang
-          </p>
-        </div>
-
-        <div className="p-4">
-          <p className="text-xs font-medium text-[var(--color-text-secondary)]">
-            Terlambat
-          </p>
-          <p className="text-2xl font-semibold tabular-nums text-[var(--color-warning)] mt-1">
-            {summary.lateToday}
-          </p>
-          <p className="text-xs text-[var(--color-text-muted)] mt-1">
-            Melewati batas toleransi masuk
-          </p>
-        </div>
-
-        <div className="p-4">
-          <p className="text-xs font-medium text-[var(--color-text-secondary)]">
-            Belum Presensi
-          </p>
-          <p className="text-2xl font-semibold tabular-nums text-[var(--color-text-primary)] mt-1">
-            {summary.notCheckedInToday}
-          </p>
-          <p className="text-xs text-[var(--color-text-muted)] mt-1">
-            Peserta aktif belum check-in
-          </p>
-        </div>
+        {summary.activeParticipants > 0 && (
+          <div className="px-4 py-3 border-t border-[var(--color-bg-subtle)] bg-[var(--color-bg-subtle)]/40 space-y-2">
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[var(--color-text-secondary)]">
+              <span className="font-medium text-[var(--color-text-primary)]">
+                Komposisi Kehadiran Hari Ini
+              </span>
+              <span className="tabular-nums">
+                Tepat waktu {presentPct}% · Terlambat {latePct}% · Belum masuk{' '}
+                {pendingPct}%
+              </span>
+            </div>
+            <div
+              aria-hidden="true"
+              className="h-2 w-full rounded-full bg-slate-200 overflow-hidden flex"
+            >
+              {presentPct > 0 && (
+                <div
+                  style={{ width: `${presentPct}%` }}
+                  className="h-full bg-[var(--color-success)] transition-all duration-300"
+                />
+              )}
+              {latePct > 0 && (
+                <div
+                  style={{ width: `${latePct}%` }}
+                  className="h-full bg-[var(--color-warning)] transition-all duration-300"
+                />
+              )}
+            </div>
+          </div>
+        )}
       </section>
 
       <section className="space-y-2.5">

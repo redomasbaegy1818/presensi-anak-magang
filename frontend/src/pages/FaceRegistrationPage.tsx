@@ -151,6 +151,18 @@ export default function FaceRegistrationPage() {
         }
       />
 
+      <details className="rounded-[var(--radius-md)] bg-white border border-[var(--color-border)] px-4 py-2.5 text-xs text-[var(--color-text-secondary)]">
+        <summary className="font-medium text-[var(--color-text-primary)] cursor-pointer select-none">
+          Tips agar pendaftaran wajah cepat berhasil
+        </summary>
+        <ul className="mt-2 list-disc pl-4 space-y-1 leading-relaxed">
+          <li>Hadapkan wajah lurus ke kamera di dalam bingkai sudut.</li>
+          <li>Pastikan cahaya dari depan cukup terang dan tidak buram.</li>
+          <li>Lepas masker/penutup wajah dan pastikan hanya ada 1 orang di kamera.</li>
+          <li>Jika kamera tidak muncul, cek izin kamera di bilah alamat browser.</li>
+        </ul>
+      </details>
+
       <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-sm">
         <Link
           to="/peserta/profil"

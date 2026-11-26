@@ -158,11 +158,26 @@ export function CameraCaptureFrame({
   return (
     <section
       aria-label="Area Kamera Wajah"
-      className="bg-white border border-[var(--color-border)] rounded-[var(--radius-lg)] p-3 sm:p-4 space-y-3"
+      className="bg-white border border-[var(--color-border)] rounded-[var(--radius-lg)] shadow-[var(--shadow-sm)] p-3 sm:p-4 space-y-3 animate-panel-enter"
     >
+      <div className="flex items-center justify-between gap-2 text-xs">
+        <span className="font-medium text-[var(--color-text-secondary)]">
+          Pemindaian Wajah
+        </span>
+        {state === 'ready' && (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-success-bg)] border border-[var(--color-success-border)] px-2.5 py-0.5 font-medium text-[var(--color-success)]">
+            <span
+              aria-hidden="true"
+              className="size-1.5 rounded-full bg-emerald-500 animate-pulse"
+            />
+            Kamera Aktif
+          </span>
+        )}
+      </div>
+
       <div
         className={[
-          'relative aspect-[4/3] w-full overflow-hidden rounded-[var(--radius-md)] border bg-slate-900 flex items-center justify-center',
+          'relative aspect-[4/3] w-full overflow-hidden rounded-[var(--radius-md)] border bg-slate-900 flex items-center justify-center transition-colors duration-200',
           meta.frameBorderClass,
         ].join(' ')}
       >

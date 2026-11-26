@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Badge,
@@ -6,6 +6,8 @@ import {
   DataTable,
   ErrorState,
   Input,
+  paginateItems,
+  Pagination,
   type TableColumn,
 } from '../components/ui/index.ts';
 import { useAuth } from '../hooks/useAuth.ts';
@@ -75,6 +77,8 @@ export default function AttendanceHistoryPage() {
 
   const [monthFilter, setMonthFilter] = useState('');
   const [rows, setRows] = useState<AttendanceRecordItem[]>([]);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -85,6 +89,7 @@ export default function AttendanceHistoryPage() {
     try {
       const res = await getParticipantAttendanceHistory(monthFilter || undefined);
       setRows(res.records);
+      setPage(1);
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) {
         clearAuthenticatedUser();
@@ -107,6 +112,11 @@ export default function AttendanceHistoryPage() {
   useEffect(() => {
     void loadHistory();
   }, [loadHistory]);
+
+  const { pagedItems } = useMemo(
+    () => paginateItems(rows, page, pageSize),
+    [rows, page, pageSize],
+  );
 
   return (
     <div className="space-y-4">
@@ -141,19 +151,34 @@ export default function AttendanceHistoryPage() {
           }
         />
       ) : (
-        <DataTable
-          caption="Riwayat presensi peserta magang"
-          columns={COLUMNS}
-          rows={rows}
-          loading={loading}
-          getRowKey={(row) => row.id}
-          emptyTitle="Belum ada riwayat presensi"
-          emptyDescription={
-            monthFilter
-              ? 'Tidak ada catatan presensi pada bulan yang dipilih.'
-              : 'Catatan presensi masuk dan pulang Anda akan tampil di sini setelah presensi dilakukan.'
-          }
-        />
+        <div className="space-y-3">
+          <DataTable
+            caption="Riwayat presensi peserta magang"
+            columns={COLUMNS}
+            rows={pagedItems}
+            loading={loading}
+            getRowKey={(row) => row.id}
+            emptyTitle="Belum ada riwayat presensi"
+            emptyDescription={
+              monthFilter
+                ? 'Tidak ada catatan presensi pada bulan yang dipilih.'
+                : 'Catatan presensi masuk dan pulang Anda akan tampil di sini setelah presensi dilakukan.'
+            }
+          />
+
+          <Pagination
+            page={page}
+            pageSize={pageSize}
+            totalItems={rows.length}
+            loading={loading}
+            itemLabel="catatan presensi"
+            onPageChange={setPage}
+            onPageSizeChange={(nextSize) => {
+              setPageSize(nextSize);
+              setPage(1);
+            }}
+          />
+        </div>
       )}
     </div>
   );

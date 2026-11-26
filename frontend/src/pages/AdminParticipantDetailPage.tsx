@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   Alert,
@@ -8,6 +8,8 @@ import {
   ErrorState,
   LoadingState,
   Modal,
+  paginateItems,
+  Pagination,
   type TableColumn,
 } from '../components/ui/index.ts';
 import { ParticipantEditModal } from '../forms/ParticipantEditModal.tsx';
@@ -15,6 +17,8 @@ import { useAuth } from '../hooks/useAuth.ts';
 import { usePageTitle } from '../hooks/usePageTitle.ts';
 import { ApiError } from '../services/apiClient.ts';
 import {
+  createAdminParticipantResetLink,
+  deleteAdminParticipant,
   getAdminParticipantDetail,
   updateAdminParticipantStatus,
 } from '../services/adminService.ts';
@@ -95,6 +99,20 @@ export default function AdminParticipantDetailPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [statusModalOpen, setStatusModalOpen] = useState(false);
   const [statusSubmitting, setStatusSubmitting] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyPageSize, setHistoryPageSize] = useState(10);
+  const [resetModalOpen, setResetModalOpen] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
+  const [resetLinkResult, setResetLinkResult] = useState<{
+    resetUrl: string;
+    expiresInMinutes: number;
+    message: string;
+  } | null>(null);
+  const [copiedResetLink, setCopiedResetLink] = useState(false);
 
   const handleUnauthorized = useCallback(() => {
     clearAuthenticatedUser();
@@ -157,6 +175,77 @@ export default function AdminParticipantDetailPage() {
       setStatusSubmitting(false);
     }
   };
+
+  const handleConfirmDelete = async () => {
+    if (!participant) return;
+    setDeleteSubmitting(true);
+    setDeleteError(null);
+
+    try {
+      const res = await deleteAdminParticipant(participant.id);
+      navigate('/admin/peserta', {
+        replace: true,
+        state: { feedbackBanner: res.message },
+      });
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) {
+        handleUnauthorized();
+        return;
+      }
+      setDeleteError(
+        error instanceof ApiError
+          ? error.message
+          : 'Gagal menghapus peserta magang.',
+      );
+    } finally {
+      setDeleteSubmitting(false);
+    }
+  };
+
+  const handleOpenResetLinkModal = async () => {
+    if (!participant) return;
+    setResetModalOpen(true);
+    setResetLoading(true);
+    setResetError(null);
+    setResetLinkResult(null);
+    setCopiedResetLink(false);
+
+    try {
+      const res = await createAdminParticipantResetLink(participant.id);
+      setResetLinkResult({
+        resetUrl: res.resetUrl,
+        expiresInMinutes: res.expiresInMinutes,
+        message: res.message,
+      });
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) {
+        handleUnauthorized();
+        return;
+      }
+      setResetError(
+        error instanceof ApiError
+          ? error.message
+          : 'Gagal membuat tautan reset kata sandi.',
+      );
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
+  const handleCopyResetLink = async () => {
+    if (!resetLinkResult?.resetUrl) return;
+    try {
+      await navigator.clipboard.writeText(resetLinkResult.resetUrl);
+      setCopiedResetLink(true);
+    } catch {
+      setCopiedResetLink(false);
+    }
+  };
+
+  const { pagedItems: pagedAttendances } = useMemo(
+    () => paginateItems(recentAttendances, historyPage, historyPageSize),
+    [recentAttendances, historyPage, historyPageSize],
+  );
 
   if (loading) {
     return (
@@ -223,7 +312,7 @@ export default function AdminParticipantDetailPage() {
           </h1>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="secondary"
             size="sm"
@@ -231,6 +320,15 @@ export default function AdminParticipantDetailPage() {
           >
             Ubah Informasi
           </Button>
+          {participant.status === 'ACTIVE' && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => void handleOpenResetLinkModal()}
+            >
+              Reset Sandi
+            </Button>
+          )}
           <Button
             variant={participant.status === 'ACTIVE' ? 'danger' : 'primary'}
             size="sm"
@@ -238,6 +336,19 @@ export default function AdminParticipantDetailPage() {
           >
             {participant.status === 'ACTIVE' ? 'Nonaktifkan' : 'Aktifkan'}
           </Button>
+          {recentAttendances.length === 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-[var(--color-danger)] hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)]"
+              onClick={() => {
+                setDeleteError(null);
+                setDeleteModalOpen(true);
+              }}
+            >
+              Hapus Akun
+            </Button>
+          )}
         </div>
       </div>
 
@@ -297,10 +408,22 @@ export default function AdminParticipantDetailPage() {
         <DataTable
           caption="Riwayat presensi peserta terkait"
           columns={HISTORY_COLUMNS}
-          rows={recentAttendances}
+          rows={pagedAttendances}
           getRowKey={(row) => row.id}
           emptyTitle="Belum ada catatan presensi"
           emptyDescription="Peserta ini belum memiliki riwayat presensi."
+        />
+        <Pagination
+          page={historyPage}
+          pageSize={historyPageSize}
+          totalItems={recentAttendances.length}
+          pageSizeOptions={[5, 10, 15]}
+          itemLabel="riwayat presensi"
+          onPageChange={setHistoryPage}
+          onPageSizeChange={(nextSize) => {
+            setHistoryPageSize(nextSize);
+            setHistoryPage(1);
+          }}
         />
       </section>
 
@@ -351,6 +474,114 @@ export default function AdminParticipantDetailPage() {
             ? `Apakah Anda yakin ingin menonaktifkan ${participant.fullName} (${participant.nimNis})? Peserta yang dinonaktifkan tidak dapat masuk maupun melakukan presensi, dan sesi login aktifnya akan segera dihentikan.`
             : `Aktifkan kembali akun ${participant.fullName} (${participant.nimNis}) agar dapat masuk dan melakukan presensi?`}
         </p>
+      </Modal>
+
+      <Modal
+        open={deleteModalOpen}
+        onClose={() => {
+          if (!deleteSubmitting) setDeleteModalOpen(false);
+        }}
+        title="Hapus Akun Peserta Secara Permanen"
+        footer={
+          <>
+            <Button
+              variant="secondary"
+              disabled={deleteSubmitting}
+              onClick={() => setDeleteModalOpen(false)}
+            >
+              Batal
+            </Button>
+            <Button
+              variant="danger"
+              loading={deleteSubmitting}
+              onClick={() => void handleConfirmDelete()}
+            >
+              Hapus Permanen
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          {deleteError && (
+            <Alert tone="danger" title="Penghapusan Dibatalkan">
+              {deleteError}
+            </Alert>
+          )}
+          <p className="text-sm text-[var(--color-text-secondary)]">
+            Anda akan menghapus permanen akun{' '}
+            <strong>{participant.fullName}</strong> ({participant.nimNis}) beserta
+            data login dan pendaftaran wajahnya.
+          </p>
+          <p className="text-xs text-[var(--color-text-muted)]">
+            Hapus permanen hanya diperbolehkan untuk peserta yang belum memiliki
+            catatan presensi. Tindakan ini tidak dapat dibatalkan.
+          </p>
+        </div>
+      </Modal>
+
+      <Modal
+        open={resetModalOpen}
+        onClose={() => {
+          if (!resetLoading) setResetModalOpen(false);
+        }}
+        title="Tautan Reset Kata Sandi Peserta"
+        footer={
+          <>
+            <Button
+              variant="secondary"
+              onClick={() => setResetModalOpen(false)}
+            >
+              Tutup
+            </Button>
+            {resetLinkResult && (
+              <Button
+                variant="primary"
+                onClick={() => void handleCopyResetLink()}
+              >
+                {copiedResetLink ? 'Tersalin!' : 'Salin Tautan'}
+              </Button>
+            )}
+          </>
+        }
+      >
+        <div className="space-y-3">
+          {resetLoading ? (
+            <LoadingState label="Membuat tautan reset satu kali..." />
+          ) : resetError ? (
+            <Alert tone="danger" title="Gagal Membuat Tautan">
+              {resetError}
+            </Alert>
+          ) : (
+            resetLinkResult && (
+              <>
+                <Alert tone="success" title="Tautan Siap Dibagikan">
+                  {resetLinkResult.message}
+                </Alert>
+                <div className="space-y-1.5">
+                  <label
+                    htmlFor="participant-reset-url"
+                    className="block text-xs font-medium text-[var(--color-text-secondary)]"
+                  >
+                    Tautan satu kali pakai (berlaku {resetLinkResult.expiresInMinutes} menit)
+                  </label>
+                  <input
+                    id="participant-reset-url"
+                    type="text"
+                    readOnly
+                    value={resetLinkResult.resetUrl}
+                    onFocus={(e) => e.currentTarget.select()}
+                    className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border-strong)] bg-[var(--color-bg-subtle)] px-3 py-2 text-xs text-[var(--color-text-primary)] select-all"
+                  />
+                </div>
+                <p className="text-xs text-[var(--color-text-muted)]">
+                  Kirimkan tautan ini ke <strong>{participant.fullName}</strong>{' '}
+                  (misalnya melalui WhatsApp) agar peserta dapat mengatur kata
+                  sandi barunya secara mandiri.
+                </p>
+              </>
+            )
+          )}
+        </div>
       </Modal>
     </div>
   );

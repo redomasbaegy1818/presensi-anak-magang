@@ -2,6 +2,8 @@ import type {
   AttendanceActionType,
   AttendanceMarkResponse,
   AttendanceRecordItem,
+  CreatePermissionPayload,
+  PermissionRequestItem,
   TodayAttendanceSummary,
 } from '../types/domain.ts';
 import { apiRequest } from './apiClient.ts';
@@ -32,5 +34,25 @@ export function getParticipantAttendanceHistory(
   const query = month ? `?month=${encodeURIComponent(month)}` : '';
   return apiRequest<{ records: AttendanceRecordItem[] }>(
     `/participant/attendance/history${query}`,
+  );
+}
+
+export function getParticipantPermissions(): Promise<{
+  permissions: PermissionRequestItem[];
+}> {
+  return apiRequest<{ permissions: PermissionRequestItem[] }>(
+    '/participant/permissions',
+  );
+}
+
+export function createParticipantPermission(
+  payload: CreatePermissionPayload,
+): Promise<{ permission: PermissionRequestItem; message: string }> {
+  return apiRequest<{ permission: PermissionRequestItem; message: string }>(
+    '/participant/permissions',
+    {
+      method: 'POST',
+      body: payload,
+    },
   );
 }

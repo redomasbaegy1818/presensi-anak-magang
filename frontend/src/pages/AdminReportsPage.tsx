@@ -7,8 +7,11 @@ import {
   DataTable,
   EmptyState,
   ErrorState,
+  IconDownload,
   Input,
   LoadingState,
+  paginateItems,
+  Pagination,
   Select,
   type TableColumn,
 } from '../components/ui/index.ts';
@@ -47,8 +50,6 @@ const STATUS_FILTER_OPTIONS = [
   { value: 'LATE', label: 'Terlambat' },
   { value: 'ABSENT', label: 'Tidak Hadir' },
 ];
-
-const DETAIL_PAGE_LIMIT = 20;
 
 function getTodayWibDateStr(): string {
   return new Intl.DateTimeFormat('en-CA', {
@@ -121,7 +122,10 @@ export default function AdminReportsPage() {
   const [exportingFormat, setExportingFormat] =
     useState<ReportExportFormat | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [groupedPage, setGroupedPage] = useState(1);
+  const [groupedPageSize, setGroupedPageSize] = useState(10);
   const [detailPage, setDetailPage] = useState(1);
+  const [detailPageSize, setDetailPageSize] = useState(20);
 
   const handleUnauthorized = useCallback(() => {
     clearAuthenticatedUser();
@@ -155,6 +159,7 @@ export default function AdminReportsPage() {
         status,
       });
       setReport(data);
+      setGroupedPage(1);
       setDetailPage(1);
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) {
@@ -423,18 +428,23 @@ export default function AdminReportsPage() {
     [],
   );
 
+  const groupedRows = useMemo(
+    () => report?.groupedRows ?? [],
+    [report?.groupedRows],
+  );
+  const { pagedItems: paginatedGroupedRows } = useMemo(
+    () => paginateItems(groupedRows, groupedPage, groupedPageSize),
+    [groupedRows, groupedPage, groupedPageSize],
+  );
+
   const detailRows = useMemo(
     () => report?.detailRows ?? [],
     [report?.detailRows],
   );
-  const totalDetailPages = Math.max(
-    1,
-    Math.ceil(detailRows.length / DETAIL_PAGE_LIMIT),
+  const { pagedItems: paginatedDetailRows } = useMemo(
+    () => paginateItems(detailRows, detailPage, detailPageSize),
+    [detailRows, detailPage, detailPageSize],
   );
-  const paginatedDetailRows = useMemo(() => {
-    const startIdx = (detailPage - 1) * DETAIL_PAGE_LIMIT;
-    return detailRows.slice(startIdx, startIdx + DETAIL_PAGE_LIMIT);
-  }, [detailPage, detailRows]);
 
   const hasAnyRows =
     (report?.groupedRows.length ?? 0) > 0 || detailRows.length > 0;
@@ -463,7 +473,12 @@ export default function AdminReportsPage() {
             }
             onClick={() => void handleExport('xlsx')}
           >
-            {exportingFormat === 'xlsx' ? 'Menyiapkan Excel...' : 'Ekspor Excel'}
+            <IconDownload className="size-3.5" />
+            <span>
+              {exportingFormat === 'xlsx'
+                ? 'Menyiapkan Excel...'
+                : 'Ekspor Excel'}
+            </span>
           </Button>
           <Button
             variant="secondary"
@@ -476,7 +491,10 @@ export default function AdminReportsPage() {
             }
             onClick={() => void handleExport('pdf')}
           >
-            {exportingFormat === 'pdf' ? 'Menyiapkan PDF...' : 'Ekspor PDF'}
+            <IconDownload className="size-3.5" />
+            <span>
+              {exportingFormat === 'pdf' ? 'Menyiapkan PDF...' : 'Ekspor PDF'}
+            </span>
           </Button>
         </div>
       </div>
@@ -596,7 +614,7 @@ export default function AdminReportsPage() {
           {/* Ringkasan Operasional */}
           <section
             aria-label="Ringkasan statistik laporan"
-            className="bg-white border border-[var(--color-border)] rounded-[var(--radius-md)] px-4 py-3.5"
+            className="bg-white border border-[var(--color-border)] rounded-[var(--radius-md)] shadow-[var(--shadow-sm)] px-4 py-3.5 space-y-3"
           >
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 divide-y sm:divide-y-0 sm:divide-x divide-[var(--color-border)]">
               <div className="pt-2 sm:pt-0">
@@ -614,7 +632,7 @@ export default function AdminReportsPage() {
                 <p className="text-xs text-[var(--color-text-muted)]">
                   Hadir Tepat Waktu
                 </p>
-                <p className="text-lg font-semibold tabular-nums text-[var(--color-text-primary)]">
+                <p className="text-lg font-semibold tabular-nums text-[var(--color-success)]">
                   {report.summary.presentCount}
                 </p>
               </div>
@@ -622,7 +640,7 @@ export default function AdminReportsPage() {
                 <p className="text-xs text-[var(--color-text-muted)]">
                   Terlambat
                 </p>
-                <p className="text-lg font-semibold tabular-nums text-[var(--color-text-primary)]">
+                <p className="text-lg font-semibold tabular-nums text-[var(--color-warning)]">
                   {report.summary.lateCount}
                 </p>
               </div>
@@ -641,9 +659,15 @@ export default function AdminReportsPage() {
                 <p className="text-lg font-semibold tabular-nums text-[var(--color-text-primary)]">
                   {report.summary.attendancePercentage}%
                 </p>
-                <p className="text-xs text-[var(--color-text-secondary)]">
-                  {report.summary.uniqueParticipants} peserta tercatat
-                </p>
+                <div
+                  aria-hidden="true"
+                  className="mt-1.5 h-1.5 w-full rounded-full bg-slate-200 overflow-hidden"
+                >
+                  <div
+                    style={{ width: `${report.summary.attendancePercentage}%` }}
+                    className="h-full bg-[var(--color-accent)] transition-all duration-300"
+                  />
+                </div>
               </div>
             </div>
           </section>
@@ -661,10 +685,22 @@ export default function AdminReportsPage() {
             <DataTable
               caption="Tabel rekapitulasi laporan kehadiran"
               columns={groupedColumns}
-              rows={report.groupedRows}
+              rows={paginatedGroupedRows}
               getRowKey={(row) => row.key}
               emptyTitle="Belum ada baris rekapitulasi"
               emptyDescription="Tidak ada data rekap untuk filter saat ini."
+            />
+
+            <Pagination
+              page={groupedPage}
+              pageSize={groupedPageSize}
+              totalItems={groupedRows.length}
+              itemLabel="baris rekap"
+              onPageChange={setGroupedPage}
+              onPageSizeChange={(nextSize) => {
+                setGroupedPageSize(nextSize);
+                setGroupedPage(1);
+              }}
             />
           </section>
 
@@ -689,33 +725,17 @@ export default function AdminReportsPage() {
               emptyDescription="Filter yang dipilih tidak memiliki catatan presensi individual."
             />
 
-            {totalDetailPages > 1 && (
-              <div className="flex items-center justify-between pt-1">
-                <p className="text-xs text-[var(--color-text-secondary)]">
-                  Halaman {detailPage} dari {totalDetailPages}
-                </p>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    disabled={detailPage <= 1}
-                    onClick={() => setDetailPage((p) => Math.max(1, p - 1))}
-                  >
-                    Sebelumnya
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    disabled={detailPage >= totalDetailPages}
-                    onClick={() =>
-                      setDetailPage((p) => Math.min(totalDetailPages, p + 1))
-                    }
-                  >
-                    Berikutnya
-                  </Button>
-                </div>
-              </div>
-            )}
+            <Pagination
+              page={detailPage}
+              pageSize={detailPageSize}
+              totalItems={detailRows.length}
+              itemLabel="catatan presensi"
+              onPageChange={setDetailPage}
+              onPageSizeChange={(nextSize) => {
+                setDetailPageSize(nextSize);
+                setDetailPage(1);
+              }}
+            />
           </section>
         </div>
       )}

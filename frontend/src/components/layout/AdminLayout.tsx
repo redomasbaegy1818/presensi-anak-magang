@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react';
+import { HelpGuideModal } from '../ui/HelpGuideModal.tsx';
 import { Sidebar, type NavItem } from './Sidebar.tsx';
 import { Topbar } from './Topbar.tsx';
 
@@ -24,6 +25,7 @@ export function AdminLayout({
   children,
 }: AdminLayoutProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
 
   return (
     <div className="min-h-dvh flex bg-[var(--color-bg-page)]">
@@ -45,6 +47,7 @@ export function AdminLayout({
           userRoleLabel="Administrator"
           onMenuClick={() => setMobileOpen(true)}
           menuExpanded={mobileOpen}
+          onHelpClick={() => setHelpOpen(true)}
           onLogout={onLogout}
         />
 
@@ -56,6 +59,12 @@ export function AdminLayout({
           {children}
         </main>
       </div>
+
+      <HelpGuideModal
+        audience="admin"
+        open={helpOpen}
+        onClose={() => setHelpOpen(false)}
+      />
     </div>
   );
 }

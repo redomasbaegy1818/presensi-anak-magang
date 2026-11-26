@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { Alert, Button, LoadingState } from '../components/ui/index.ts';
+import { Alert, BrandLogo, Button, LoadingState } from '../components/ui/index.ts';
 import { LoginForm, type LoginFormValues } from '../forms/LoginForm.tsx';
 import { useAuth } from '../hooks/useAuth.ts';
 import { usePageTitle } from '../hooks/usePageTitle.ts';
@@ -73,7 +73,7 @@ export default function AdminLoginPage() {
     setSubmitting(true);
 
     try {
-      await loginAdmin(values.identifier, values.password);
+      await loginAdmin(values.identifier, values.password, values.rememberMe);
       const destination =
         locationState?.from && locationState.from.startsWith('/admin')
           ? locationState.from
@@ -93,24 +93,26 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="min-h-dvh bg-[var(--color-bg-page)] flex flex-col justify-center px-4 py-8">
-      <div className="w-full max-w-md mx-auto space-y-5">
-        <header className="space-y-1">
-          <div className="flex items-center gap-2">
-            <span
-              aria-hidden="true"
-              className="inline-block w-1.5 h-6 rounded-[2px] bg-[var(--color-accent)]"
-            />
-            <h1 className="text-xl font-semibold text-[var(--color-text-primary)]">
-              Portal Admin — Presensi Magang
-            </h1>
+    <div className="min-h-dvh bg-gradient-to-b from-[#f8f9fb] to-[#eef1f5] flex flex-col justify-center px-4 py-8">
+      <div className="w-full max-w-md mx-auto space-y-5 animate-panel-enter">
+        <header className="space-y-2">
+          <div className="flex items-center gap-3">
+            <BrandLogo size="lg" />
+            <div>
+              <span className="inline-block text-[11px] font-semibold uppercase tracking-wider text-[var(--color-accent-text)]">
+                Portal Administrator
+              </span>
+              <h1 className="text-xl font-semibold text-[var(--color-text-primary)] leading-tight">
+                Presensi Magang
+              </h1>
+            </div>
           </div>
           <p className="text-sm text-[var(--color-text-secondary)]">
             Masuk untuk mengelola peserta, memantau presensi harian, dan menyusun laporan.
           </p>
         </header>
 
-        <main className="bg-white border border-[var(--color-border)] rounded-[var(--radius-lg)] p-5 sm:p-6 space-y-4">
+        <main className="bg-white border border-[var(--color-border)] border-t-3 border-t-[var(--color-accent)] rounded-[var(--radius-lg)] shadow-[var(--shadow-sm)] p-5 sm:p-6 space-y-4">
           {errorMessage ? (
             <Alert tone="danger" title="Gagal Masuk">
               {errorMessage}
@@ -140,20 +142,27 @@ export default function AdminLoginPage() {
           )}
 
           <LoginForm
-            identifierLabel="Email atau Username Admin"
-            identifierPlaceholder="admin@kantor.id"
-            submitLabel="Masuk ke Dashboard Admin"
+            identifierLabel="Username / Email"
+            identifierPlaceholder="Username atau email admin"
+            passwordLabel="Password"
+            passwordPlaceholder="Password"
+            submitLabel="Masuk"
+            forgotPasswordHref="/lupa-password?portal=admin"
+            rememberStorageKey="mp_remember_admin"
             loading={submitting}
             onSubmit={handleSubmit}
           />
 
-          <div className="pt-3 border-t border-[var(--color-bg-subtle)] text-sm">
-            <Link
-              to="/masuk"
-              className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:underline"
-            >
-              Kembali ke Portal Peserta
-            </Link>
+          <div className="pt-4 border-t border-[var(--color-bg-subtle)] text-center text-sm">
+            <p className="text-[var(--color-text-secondary)]">
+              Bukan admin?{' '}
+              <Link
+                to="/masuk"
+                className="font-semibold text-[var(--color-accent-text)] hover:underline"
+              >
+                Masuk Portal Peserta
+              </Link>
+            </p>
           </div>
         </main>
       </div>

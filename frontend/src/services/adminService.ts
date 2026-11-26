@@ -7,10 +7,14 @@ import type {
   AdminParticipantDetailResponse,
   AdminParticipantsListResponse,
   AdminParticipantUpdatePayload,
+  AdminPermissionsListResponse,
   AttendanceSettingsData,
   AttendanceStatus,
   ParticipantProfile,
   ParticipantStatus,
+  PermissionRequestItem,
+  PermissionStatus,
+  PermissionType,
   ReportExportFormat,
   ReportType,
 } from '../types/domain.ts';
@@ -78,6 +82,33 @@ export function updateAdminParticipantStatus(
       body: { status },
     },
   );
+}
+
+export function deleteAdminParticipant(
+  id: string,
+): Promise<{ deletedParticipantId: string; message: string }> {
+  return apiRequest<{ deletedParticipantId: string; message: string }>(
+    `/admin/participants/${encodeURIComponent(id)}`,
+    {
+      method: 'DELETE',
+    },
+  );
+}
+
+export function createAdminParticipantResetLink(id: string): Promise<{
+  resetUrl: string;
+  expiresAt: string;
+  expiresInMinutes: number;
+  message: string;
+}> {
+  return apiRequest<{
+    resetUrl: string;
+    expiresAt: string;
+    expiresInMinutes: number;
+    message: string;
+  }>(`/admin/participants/${encodeURIComponent(id)}/reset-password-link`, {
+    method: 'POST',
+  });
 }
 
 export interface AdminAttendanceFilterParams {
@@ -251,4 +282,43 @@ export function updateAdminSettings(
     method: 'PUT',
     body: payload,
   });
+}
+
+export interface AdminPermissionsFilterParams {
+  search?: string;
+  status?: 'ALL' | PermissionStatus;
+  type?: 'ALL' | PermissionType;
+  date?: string;
+  page?: number;
+  limit?: number;
+}
+
+export function getAdminPermissions(
+  params: AdminPermissionsFilterParams = {},
+): Promise<AdminPermissionsListResponse> {
+  const qs = new URLSearchParams();
+  if (params.search?.trim()) qs.set('search', params.search.trim());
+  if (params.status && params.status !== 'ALL') qs.set('status', params.status);
+  if (params.type && params.type !== 'ALL') qs.set('type', params.type);
+  if (params.date) qs.set('date', params.date);
+  if (params.page) qs.set('page', String(params.page));
+  if (params.limit) qs.set('limit', String(params.limit));
+
+  const queryString = qs.toString();
+  return apiRequest<AdminPermissionsListResponse>(
+    `/admin/permissions${queryString ? `?${queryString}` : ''}`,
+  );
+}
+
+export function reviewAdminPermission(
+  id: string,
+  payload: { status: 'APPROVED' | 'REJECTED'; adminNote?: string },
+): Promise<{ permission: PermissionRequestItem; message: string }> {
+  return apiRequest<{ permission: PermissionRequestItem; message: string }>(
+    `/admin/permissions/${encodeURIComponent(id)}/review`,
+    {
+      method: 'PATCH',
+      body: payload,
+    },
+  );
 }

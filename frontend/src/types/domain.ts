@@ -59,10 +59,25 @@ export interface AdminOverviewResponse {
     attendedToday: number;
     presentToday: number;
     lateToday: number;
+    excusedToday: number;
     notCheckedInToday: number;
     checkedOutToday: number;
+    pendingPermissions: number;
   };
   recentAttendance: AttendanceRecordItem[];
+  recentPermissions: Array<{
+    id: string;
+    participantId: string;
+    participantName: string;
+    nimNis: string;
+    division: string;
+    type: PermissionType;
+    startDate: string;
+    endDate: string;
+    reason: string;
+    status: PermissionStatus;
+    createdAt: string;
+  }>;
   checkedAt: string;
 }
 
@@ -300,6 +315,50 @@ export interface TodayAttendanceSummary {
     checkOutEndTime: string;
   };
   todayRecord: TodayAttendanceRecord | null;
+  todayPermission: {
+    id: string;
+    type: PermissionType;
+    status: PermissionStatus;
+    reason: string;
+    adminNote: string | null;
+    startDate: string;
+    endDate: string;
+  } | null;
+}
+
+export type PermissionType = 'IZIN' | 'SAKIT';
+export type PermissionStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+export interface PermissionRequestItem {
+  id: string;
+  participantId: string;
+  participantName: string;
+  nimNis: string;
+  division: string;
+  type: PermissionType;
+  startDate: string;
+  endDate: string;
+  reason: string;
+  status: PermissionStatus;
+  adminNote: string | null;
+  reviewedAt: string | null;
+  reviewedByLabel: string | null;
+  createdAt: string;
+}
+
+export interface CreatePermissionPayload {
+  type: PermissionType;
+  startDate: string;
+  endDate: string;
+  reason: string;
+}
+
+export interface AdminPermissionsListResponse {
+  permissions: PermissionRequestItem[];
+  total: number;
+  pendingCount: number;
+  page: number;
+  limit: number;
 }
 
 export interface AttendanceConfirmationData {

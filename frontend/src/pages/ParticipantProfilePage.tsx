@@ -5,6 +5,7 @@ import {
   Button,
   ErrorState,
   LoadingState,
+  UserAvatar,
 } from '../components/ui/index.ts';
 import { useAuth } from '../hooks/useAuth.ts';
 import { usePageTitle } from '../hooks/usePageTitle.ts';
@@ -96,15 +97,18 @@ export default function ParticipantProfilePage() {
 
   return (
     <div className="space-y-4">
-      <section className="bg-white border border-[var(--color-border)] rounded-[var(--radius-md)] p-4 sm:p-5 space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-[var(--color-bg-subtle)]">
-          <div>
-            <h2 className="text-base font-semibold text-[var(--color-text-primary)]">
-              Informasi Dasar Peserta
-            </h2>
-            <p className="text-xs text-[var(--color-text-muted)]">
-              Data identitas dan periode magang yang terdaftar di sistem.
-            </p>
+      <section className="bg-white border border-[var(--color-border)] rounded-[var(--radius-md)] shadow-[var(--shadow-sm)] p-4 sm:p-5 space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-[var(--color-bg-subtle)]">
+          <div className="flex items-center gap-3 min-w-0">
+            <UserAvatar name={profile.fullName} size="md" />
+            <div className="min-w-0">
+              <h2 className="text-base font-semibold text-[var(--color-text-primary)] truncate">
+                {profile.fullName}
+              </h2>
+              <p className="text-xs text-[var(--color-text-muted)] truncate">
+                {profile.nimNis} · {profile.division}
+              </p>
+            </div>
           </div>
           <Badge tone={profile.status === 'ACTIVE' ? 'success' : 'danger'}>
             {formatParticipantStatus(profile.status)}

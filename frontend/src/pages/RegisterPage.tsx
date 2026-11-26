@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
-import { Alert, Button, LoadingState, SuccessState } from '../components/ui/index.ts';
+import { Alert, BrandLogo, Button, LoadingState, SuccessState } from '../components/ui/index.ts';
 import {
   ParticipantRegistrationForm,
   type ParticipantRegistrationValues,
@@ -74,11 +74,8 @@ export default function RegisterPage() {
       <div className="w-full max-w-3xl mx-auto space-y-5">
         <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <span
-                aria-hidden="true"
-                className="inline-block w-1.5 h-6 rounded-[2px] bg-[var(--color-accent)]"
-              />
+            <div className="flex items-center gap-3">
+              <BrandLogo size="md" />
               <h1 className="text-xl font-semibold text-[var(--color-text-primary)]">
                 Registrasi Peserta Magang
               </h1>
@@ -98,7 +95,7 @@ export default function RegisterPage() {
           )}
         </header>
 
-        <main className="bg-white border border-[var(--color-border)] rounded-[var(--radius-lg)] p-5 sm:p-6 space-y-5">
+        <main className="bg-white border border-[var(--color-border)] border-t-3 border-t-[var(--color-accent)] rounded-[var(--radius-lg)] shadow-[var(--shadow-sm)] p-5 sm:p-6 space-y-5">
           {registeredName ? (
             <SuccessState
               title="Pendaftaran Peserta Berhasil"

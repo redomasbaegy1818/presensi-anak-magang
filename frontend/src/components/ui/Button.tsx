@@ -49,7 +49,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       disabled={disabled || loading}
       aria-busy={loading || undefined}
       className={[
-        'inline-flex items-center justify-center gap-2 rounded-[var(--radius-md)] font-medium transition-colors cursor-pointer disabled:cursor-not-allowed whitespace-nowrap',
+        'inline-flex items-center justify-center gap-2 rounded-[var(--radius-md)] font-medium transition-all duration-150 active:scale-[0.98] disabled:active:scale-100 cursor-pointer disabled:cursor-not-allowed whitespace-nowrap',
         VARIANT_CLASSES[variant],
         SIZE_CLASSES[size],
         fullWidth ? 'w-full' : '',
