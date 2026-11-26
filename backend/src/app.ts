@@ -1,40 +1,34 @@
+import cookieParser from 'cookie-parser';
 import cors from 'cors';
-import express, { type NextFunction, type Request, type Response } from 'express';
+import express from 'express';
 import helmet from 'helmet';
-import { env } from './config/env.js';
-import { healthRouter } from './routes/health.js';
+import { corsOptions, helmetOptions } from './config/security.js';
+import {
+  attachAuthContext,
+  requireSameOriginOnMutation,
+} from './middleware/authMiddleware.js';
+import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
+import { apiRateLimiter } from './middleware/rateLimiter.js';
+import { requestLogger } from './middleware/requestLogger.js';
+import { apiV1Router } from './routes/index.js';
 
 export function createApp() {
   const app = express();
 
   app.disable('x-powered-by');
-  app.use(helmet());
-  app.use(
-    cors({
-      origin: env.APP_ORIGIN,
-      credentials: true,
-    }),
-  );
+  app.use(helmet(helmetOptions));
+  app.use(cors(corsOptions));
+  app.use(cookieParser());
   app.use(express.json({ limit: '1mb' }));
+  app.use(requestLogger);
+  app.use('/api', apiRateLimiter);
+  app.use('/api', attachAuthContext);
+  app.use('/api', requireSameOriginOnMutation);
 
-  app.use('/api/v1', healthRouter);
+  app.use('/api/v1', apiV1Router);
 
-  app.use((_req: Request, res: Response) => {
-    res.status(404).json({
-      error: 'NOT_FOUND',
-      message: 'Endpoint tidak ditemukan.',
-    });
-  });
-
-  app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-    if (env.NODE_ENV !== 'production') {
-      console.error(err);
-    }
-    res.status(500).json({
-      error: 'INTERNAL_SERVER_ERROR',
-      message: 'Terjadi kesalahan pada server.',
-    });
-  });
+  app.use(notFoundHandler);
+  app.use(errorHandler);
 
   return app;
 }
