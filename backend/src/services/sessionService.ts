@@ -8,6 +8,7 @@ export type { UserRole };
 export interface AuthUserContext {
   userId: string;
   email: string;
+  username: string | null;
   role: UserRole;
   isActive: boolean;
 }
@@ -29,11 +30,13 @@ export async function resolveSessionByToken(
     const session = await prisma.session.findUnique({
       where: { tokenHash },
       select: {
+        id: true,
         expiresAt: true,
         user: {
           select: {
             id: true,
             email: true,
+            username: true,
             role: true,
             isActive: true,
           },
@@ -41,13 +44,19 @@ export async function resolveSessionByToken(
       },
     });
 
-    if (!session || session.expiresAt <= new Date()) {
+    if (!session) {
+      return null;
+    }
+
+    if (session.expiresAt <= new Date()) {
+      await prisma.session.deleteMany({ where: { id: session.id } });
       return null;
     }
 
     return {
       userId: session.user.id,
       email: session.user.email,
+      username: session.user.username,
       role: session.user.role,
       isActive: session.user.isActive,
     };

@@ -1,5 +1,30 @@
 export type UserRole = 'ADMIN' | 'PARTICIPANT';
 
+export interface AuthUser {
+  userId: string;
+  email: string;
+  username: string | null;
+  role: UserRole;
+  isActive: boolean;
+}
+
+export interface SessionSummary {
+  authenticated: boolean;
+  user: AuthUser | null;
+}
+
+export interface AdminOverviewResponse {
+  admin: AuthUser;
+  timezone: string;
+  summary: {
+    activeParticipants: number;
+    presentToday: number;
+    lateToday: number;
+    notCheckedInToday: number;
+  };
+  checkedAt: string;
+}
+
 export type ParticipantStatus = 'ACTIVE' | 'INACTIVE';
 
 export type AttendanceStatus = 'PRESENT' | 'LATE' | 'ABSENT';

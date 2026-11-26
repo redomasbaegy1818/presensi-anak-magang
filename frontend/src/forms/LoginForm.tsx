@@ -10,13 +10,15 @@ export interface LoginFormProps {
   identifierLabel?: string;
   identifierPlaceholder?: string;
   submitLabel?: string;
-  onSubmit: (values: LoginFormValues) => void;
+  loading?: boolean;
+  onSubmit: (values: LoginFormValues) => void | Promise<void>;
 }
 
 export function LoginForm({
   identifierLabel = 'Email',
   identifierPlaceholder = 'nama@kantor.id',
   submitLabel = 'Masuk',
+  loading = false,
   onSubmit,
 }: LoginFormProps) {
   const [identifier, setIdentifier] = useState('');
@@ -32,7 +34,7 @@ export function LoginForm({
     event.preventDefault();
     setSubmitted(true);
     if (!identifier.trim() || !password) return;
-    onSubmit({ identifier: identifier.trim(), password });
+    void onSubmit({ identifier: identifier.trim(), password });
   };
 
   return (
@@ -42,6 +44,7 @@ export function LoginForm({
         type="text"
         autoComplete="username"
         required
+        disabled={loading}
         placeholder={identifierPlaceholder}
         value={identifier}
         onChange={(e) => setIdentifier(e.target.value)}
@@ -53,14 +56,15 @@ export function LoginForm({
         type="password"
         autoComplete="current-password"
         required
+        disabled={loading}
         placeholder="Masukkan kata sandi"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         error={passwordError}
       />
 
-      <Button type="submit" size="lg" fullWidth>
-        {submitLabel}
+      <Button type="submit" size="lg" fullWidth loading={loading}>
+        {loading ? 'Memproses...' : submitLabel}
       </Button>
     </form>
   );

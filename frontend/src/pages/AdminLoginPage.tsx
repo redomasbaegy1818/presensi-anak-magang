@@ -1,11 +1,96 @@
-import { Link, useNavigate } from 'react-router-dom';
-import { Alert } from '../components/ui/index.ts';
-import { LoginForm } from '../forms/LoginForm.tsx';
+import { useState } from 'react';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Alert, LoadingState } from '../components/ui/index.ts';
+import { LoginForm, type LoginFormValues } from '../forms/LoginForm.tsx';
+import { useAuth } from '../hooks/useAuth.ts';
 import { usePageTitle } from '../hooks/usePageTitle.ts';
+import { ApiError } from '../services/apiClient.ts';
+
+type AuthNoticeType = 'unauthorized' | 'expired' | 'forbidden' | 'logged_out';
+
+interface LoginLocationState {
+  authNotice?: AuthNoticeType;
+  from?: string;
+}
+
+const NOTICE_CONTENT: Record<
+  AuthNoticeType,
+  { tone: 'warning' | 'danger' | 'success'; title: string; message: string }
+> = {
+  unauthorized: {
+    tone: 'warning',
+    title: 'Akses Dibatasi',
+    message: 'Silakan masuk terlebih dahulu untuk mengakses portal admin.',
+  },
+  expired: {
+    tone: 'warning',
+    title: 'Sesi Berakhir',
+    message: 'Sesi login Anda telah berakhir atau tidak valid. Silakan masuk kembali.',
+  },
+  forbidden: {
+    tone: 'danger',
+    title: 'Akses Ditolak',
+    message: 'Akun Anda tidak memiliki hak akses administrator.',
+  },
+  logged_out: {
+    tone: 'success',
+    title: 'Berhasil Keluar',
+    message: 'Anda telah keluar dari portal admin.',
+  },
+};
 
 export default function AdminLoginPage() {
   usePageTitle('Masuk Admin');
   const navigate = useNavigate();
+  const location = useLocation();
+  const { user, status, loginAdmin } = useAuth();
+
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const locationState = (location.state as LoginLocationState | null) ?? null;
+  const notice = locationState?.authNotice
+    ? NOTICE_CONTENT[locationState.authNotice]
+    : null;
+
+  if (status === 'loading') {
+    return (
+      <div className="min-h-dvh bg-[var(--color-bg-page)] flex items-center justify-center px-4">
+        <div className="bg-white border border-[var(--color-border)] rounded-[var(--radius-md)] px-8 py-4">
+          <LoadingState label="Memeriksa sesi..." />
+        </div>
+      </div>
+    );
+  }
+
+  if (status === 'authenticated' && user?.role === 'ADMIN') {
+    const target = locationState?.from || '/admin/dashboard';
+    return <Navigate to={target} replace />;
+  }
+
+  const handleSubmit = async (values: LoginFormValues) => {
+    setErrorMessage(null);
+    setSubmitting(true);
+
+    try {
+      await loginAdmin(values.identifier, values.password);
+      const destination =
+        locationState?.from && locationState.from.startsWith('/admin')
+          ? locationState.from
+          : '/admin/dashboard';
+      navigate(destination, { replace: true });
+    } catch (error) {
+      if (error instanceof ApiError) {
+        setErrorMessage(error.message);
+      } else {
+        setErrorMessage(
+          'Tidak dapat terhubung ke server. Periksa jaringan atau pastikan backend sedang berjalan.',
+        );
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div className="min-h-dvh bg-[var(--color-bg-page)] flex flex-col justify-center px-4 py-8">
@@ -25,17 +110,26 @@ export default function AdminLoginPage() {
           </p>
         </header>
 
-        <main className="bg-white border border-[var(--color-border)] rounded-[var(--radius-lg)] p-5 sm:p-6 space-y-5">
+        <main className="bg-white border border-[var(--color-border)] rounded-[var(--radius-lg)] p-5 sm:p-6 space-y-4">
+          {errorMessage ? (
+            <Alert tone="danger" title="Gagal Masuk">
+              {errorMessage}
+            </Alert>
+          ) : (
+            notice && (
+              <Alert tone={notice.tone} title={notice.title}>
+                {notice.message}
+              </Alert>
+            )
+          )}
+
           <LoginForm
             identifierLabel="Email atau Username Admin"
             identifierPlaceholder="admin@kantor.id"
             submitLabel="Masuk ke Dashboard Admin"
-            onSubmit={() => navigate('/admin/dashboard')}
+            loading={submitting}
+            onSubmit={handleSubmit}
           />
-
-          <Alert tone="info" title="Tahap Struktur Aplikasi">
-            Autentikasi admin akan dihubungkan pada fase backend auth. Mengirim formulir akan membuka kerangka dashboard admin.
-          </Alert>
 
           <div className="pt-3 border-t border-[var(--color-bg-subtle)] text-sm">
             <Link

@@ -1,5 +1,6 @@
-import { createHash, randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
+import { createHmac, randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
 import { promisify } from 'node:util';
+import { env } from '../config/env.js';
 
 const scryptAsync = promisify(scrypt);
 const SCRYPT_KEYLEN = 64;
@@ -35,7 +36,7 @@ export async function verifyPassword(
 }
 
 /**
- * Generates an opaque URL-safe session token and its SHA-256 digest for DB storage.
+ * Generates an opaque URL-safe session token and its keyed HMAC-SHA256 digest for DB storage.
  */
 export function createSessionTokenPair(): { token: string; tokenHash: string } {
   const token = randomBytes(32).toString('base64url');
@@ -46,7 +47,8 @@ export function createSessionTokenPair(): { token: string; tokenHash: string } {
 }
 
 export function hashSessionToken(token: string): string {
-  return createHash('sha256').update(token, 'utf8').digest('hex');
+  const key = env.SESSION_SECRET || 'dev-session-secret-not-for-prod';
+  return createHmac('sha256', key).update(token, 'utf8').digest('hex');
 }
 
 export function safeCompareStrings(a: string, b: string): boolean {

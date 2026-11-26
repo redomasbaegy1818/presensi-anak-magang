@@ -12,7 +12,9 @@
     "prisma:generate": "prisma generate",
     "prisma:validate": "prisma validate",
     "prisma:migrate": "prisma migrate deploy",
-    "db:verify": "tsx src/scripts/verifyDatabase.ts"
+    "db:verify": "tsx src/scripts/verifyDatabase.ts",
+    "db:seed-admin": "tsx src/scripts/seedAdmin.ts",
+    "test:admin-auth": "tsx src/scripts/testAdminAuth.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.6.0",

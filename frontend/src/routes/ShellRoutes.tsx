@@ -4,6 +4,7 @@ import {
   ParticipantLayout,
   type NavItem,
 } from '../components/layout/index.ts';
+import { useAuth } from '../hooks/useAuth.ts';
 
 const PARTICIPANT_NAV_CONFIG = [
   { id: 'presensi', label: 'Presensi', href: '/peserta/presensi' },
@@ -68,21 +69,33 @@ export function ParticipantShellRoute() {
 export function AdminShellRoute() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
 
   const navItems: NavItem[] = ADMIN_NAV_CONFIG.map((item) => ({
     ...item,
     active: pathname.startsWith(item.href),
   }));
 
+  const handleAdminLogout = async () => {
+    await logout();
+    navigate('/admin/masuk', {
+      replace: true,
+      state: { authNotice: 'logged_out' },
+    });
+  };
+
   return (
     <AdminLayout
       pageTitle={getAdminPageTitle(pathname)}
       navItems={navItems}
+      userName={user?.username || user?.email || 'Admin Kantor'}
       onNavigate={(id) => {
         const target = ADMIN_NAV_CONFIG.find((item) => item.id === id);
         if (target) navigate(target.href);
       }}
-      onLogout={() => navigate('/admin/masuk')}
+      onLogout={() => {
+        void handleAdminLogout();
+      }}
     >
       <Outlet />
     </AdminLayout>
