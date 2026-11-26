@@ -199,6 +199,16 @@ export interface AttendanceSettingsData {
   saveEvidence: boolean;
 }
 
+export interface AdminAttendanceSettingsDetail extends AttendanceSettingsData {
+  updatedAt: string;
+  updatedByLabel: string | null;
+}
+
+export interface AdminAttendanceSettingsResponse {
+  settings: AdminAttendanceSettingsDetail;
+  message?: string;
+}
+
 export interface ApiHealthStatus {
   status: string;
   service: string;

@@ -2,10 +2,12 @@ import type {
   AdminAttendanceDetailRecord,
   AdminAttendanceListResponse,
   AdminAttendanceReportResponse,
+  AdminAttendanceSettingsResponse,
   AdminCorrectAttendancePayload,
   AdminParticipantDetailResponse,
   AdminParticipantsListResponse,
   AdminParticipantUpdatePayload,
+  AttendanceSettingsData,
   AttendanceStatus,
   ParticipantProfile,
   ParticipantStatus,
@@ -210,4 +212,17 @@ export async function downloadAdminReportFile(
     blob,
     filename: match?.[1] ?? fallbackName,
   };
+}
+
+export function getAdminSettings(): Promise<AdminAttendanceSettingsResponse> {
+  return apiRequest<AdminAttendanceSettingsResponse>('/admin/settings');
+}
+
+export function updateAdminSettings(
+  payload: AttendanceSettingsData,
+): Promise<AdminAttendanceSettingsResponse> {
+  return apiRequest<AdminAttendanceSettingsResponse>('/admin/settings', {
+    method: 'PUT',
+    body: payload,
+  });
 }
