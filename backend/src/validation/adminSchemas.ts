@@ -165,6 +165,62 @@ export const adminEvidenceParamsSchema = z.object({
   type: z.enum(['CHECK_IN', 'CHECK_OUT']),
 });
 
+const REPORT_TYPES = ['daily', 'weekly', 'monthly', 'participant'] as const;
+
+export const adminReportQuerySchema = z
+  .object({
+    reportType: z.enum(REPORT_TYPES).default('monthly'),
+    startDate: z
+      .string()
+      .trim()
+      .refine(
+        (val) => !val || isValidCalendarDate(val),
+        'Format tanggal mulai harus YYYY-MM-DD yang valid.',
+      )
+      .optional(),
+    endDate: z
+      .string()
+      .trim()
+      .refine(
+        (val) => !val || isValidCalendarDate(val),
+        'Format tanggal akhir harus YYYY-MM-DD yang valid.',
+      )
+      .optional(),
+    participantId: z.string().trim().max(100).optional(),
+    division: z.string().trim().max(100).optional(),
+    status: z.enum(['ALL', 'PRESENT', 'LATE', 'ABSENT']).default('ALL'),
+  })
+  .superRefine((data, ctx) => {
+    const start = data.startDate?.trim() || '';
+    const end = data.endDate?.trim() || '';
+    if (start && end) {
+      if (end < start) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['endDate'],
+          message: 'Tanggal akhir tidak boleh lebih awal dari tanggal mulai.',
+        });
+        return;
+      }
+      const startMs = Date.parse(`${start}T00:00:00Z`);
+      const endMs = Date.parse(`${end}T00:00:00Z`);
+      const diffDays = Math.floor((endMs - startMs) / 86_400_000) + 1;
+      if (diffDays > 366) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['endDate'],
+          message: 'Rentang tanggal laporan maksimal 366 hari.',
+        });
+      }
+    }
+  });
+
+export const adminReportExportQuerySchema = adminReportQuerySchema.and(
+  z.object({
+    format: z.enum(['xlsx', 'pdf']),
+  }),
+);
+
 export type AdminParticipantsQuery = z.infer<typeof adminParticipantsQuerySchema>;
 export type AdminUpdateParticipantInput = z.infer<
   typeof adminUpdateParticipantSchema
@@ -175,4 +231,8 @@ export type AdminParticipantStatusInput = z.infer<
 export type AdminAttendanceQuery = z.infer<typeof adminAttendanceQuerySchema>;
 export type AdminCorrectAttendanceInput = z.infer<
   typeof adminCorrectAttendanceSchema
+>;
+export type AdminReportQuery = z.infer<typeof adminReportQuerySchema>;
+export type AdminReportExportQuery = z.infer<
+  typeof adminReportExportQuerySchema
 >;

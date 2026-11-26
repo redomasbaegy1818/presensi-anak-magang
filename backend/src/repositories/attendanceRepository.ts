@@ -386,3 +386,96 @@ export async function findAttendanceEvidenceStorageKey(
     },
   });
 }
+
+export interface AttendanceReportSourceFilter {
+  startDate: string;
+  endDate: string;
+  participantId?: string;
+  division?: string;
+  status: 'ALL' | 'PRESENT' | 'LATE' | 'ABSENT';
+}
+
+export async function findAttendanceReportSource(
+  filter: AttendanceReportSourceFilter,
+) {
+  const start = new Date(`${filter.startDate}T00:00:00.000Z`);
+  const end = new Date(`${filter.endDate}T00:00:00.000Z`);
+
+  const hasParticipant =
+    Boolean(filter.participantId) && filter.participantId !== 'ALL';
+  const hasDivision = Boolean(filter.division) && filter.division !== 'ALL';
+
+  const participantFilter: Prisma.ParticipantWhereInput = {
+    ...(hasParticipant ? { id: filter.participantId } : {}),
+    ...(hasDivision ? { division: filter.division } : {}),
+  };
+
+  const attendanceWhere: Prisma.AttendanceWhereInput = {
+    attendanceDate: { gte: start, lte: end },
+    ...(filter.status !== 'ALL' ? { status: filter.status } : {}),
+    ...(hasParticipant || hasDivision
+      ? { participant: participantFilter }
+      : {}),
+  };
+
+  const [attendances, participantsInScope, allParticipants] = await Promise.all(
+    [
+      prisma.attendance.findMany({
+        where: attendanceWhere,
+        orderBy: [
+          { attendanceDate: 'asc' },
+          { participant: { fullName: 'asc' } },
+        ],
+        select: {
+          id: true,
+          participantId: true,
+          attendanceDate: true,
+          checkInAt: true,
+          checkOutAt: true,
+          status: true,
+          verificationStatus: true,
+          isCorrected: true,
+          participant: {
+            select: {
+              id: true,
+              fullName: true,
+              nimNis: true,
+              division: true,
+              status: true,
+              internshipStartDate: true,
+              internshipEndDate: true,
+            },
+          },
+        },
+      }),
+      prisma.participant.findMany({
+        where: participantFilter,
+        orderBy: { fullName: 'asc' },
+        select: {
+          id: true,
+          fullName: true,
+          nimNis: true,
+          division: true,
+          status: true,
+          internshipStartDate: true,
+          internshipEndDate: true,
+        },
+      }),
+      prisma.participant.findMany({
+        orderBy: { fullName: 'asc' },
+        select: {
+          id: true,
+          fullName: true,
+          nimNis: true,
+          division: true,
+        },
+      }),
+    ],
+  );
+
+  return {
+    attendances,
+    participantsInScope,
+    allParticipants,
+  };
+}

@@ -12,6 +12,10 @@ import {
   getAdminParticipantsList,
   setParticipantStatusByAdmin,
 } from '../services/adminParticipantService.js';
+import {
+  exportAdminAttendanceReport,
+  getAdminAttendanceReport,
+} from '../services/adminReportService.js';
 import { getAdminOverviewSummary } from '../services/adminService.js';
 import { AppError } from '../utils/appError.js';
 import type {
@@ -19,6 +23,8 @@ import type {
   AdminCorrectAttendanceInput,
   AdminParticipantsQuery,
   AdminParticipantStatusInput,
+  AdminReportExportQuery,
+  AdminReportQuery,
   AdminUpdateParticipantInput,
 } from '../validation/adminSchemas.js';
 
@@ -112,5 +118,31 @@ export async function handleGetAdminAttendanceEvidence(
 
   res.setHeader('Content-Type', mimeType);
   res.setHeader('Cache-Control', 'no-store');
+  res.status(200).send(buffer);
+}
+
+export async function handleGetAdminReports(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const query = req.query as unknown as AdminReportQuery;
+  const report = await getAdminAttendanceReport(query);
+  res.status(200).json(report);
+}
+
+export async function handleExportAdminReports(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const { format, ...query } = req.query as unknown as AdminReportExportQuery;
+  const { buffer, mimeType, filename } = await exportAdminAttendanceReport(
+    query,
+    format,
+  );
+
+  res.setHeader('Content-Type', mimeType);
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
   res.status(200).send(buffer);
 }

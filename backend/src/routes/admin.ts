@@ -1,10 +1,12 @@
 import { Router } from 'express';
 import {
   handleCorrectAdminAttendance,
+  handleExportAdminReports,
   handleGetAdminAttendanceDetail,
   handleGetAdminAttendanceEvidence,
   handleGetAdminOverview,
   handleGetAdminParticipantDetail,
+  handleGetAdminReports,
   handleListAdminAttendance,
   handleListAdminParticipants,
   handleUpdateAdminParticipant,
@@ -19,6 +21,8 @@ import {
   adminEvidenceParamsSchema,
   adminParticipantsQuerySchema,
   adminParticipantStatusSchema,
+  adminReportExportQuerySchema,
+  adminReportQuerySchema,
   adminUpdateParticipantSchema,
 } from '../validation/adminSchemas.js';
 import { idParamSchema } from '../validation/commonSchemas.js';
@@ -69,4 +73,15 @@ adminRouter.get(
   '/attendance/:id/evidence/:type',
   validateRequest({ params: adminEvidenceParamsSchema }),
   asyncHandler(handleGetAdminAttendanceEvidence),
+);
+
+adminRouter.get(
+  '/reports',
+  validateRequest({ query: adminReportQuerySchema }),
+  asyncHandler(handleGetAdminReports),
+);
+adminRouter.get(
+  '/reports/export',
+  validateRequest({ query: adminReportExportQuerySchema }),
+  asyncHandler(handleExportAdminReports),
 );
