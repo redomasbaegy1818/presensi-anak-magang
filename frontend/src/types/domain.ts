@@ -143,3 +143,29 @@ export interface FaceDetectionResult {
   bbox: FaceBoundingBox | null;
   message: string;
 }
+
+export interface FaceRegistrationResult {
+  registered: boolean;
+  status: 'registered' | 'no_face' | 'multiple_faces' | 'insufficient_quality';
+  reason: FaceDetectionReason;
+  bbox: FaceBoundingBox | null;
+  registeredAt: string | null;
+  updatedAt: string | null;
+  message: string;
+}
+
+export type FaceVerificationState =
+  | 'verified'
+  | 'not_verified'
+  | 'unknown_participant'
+  | 'no_face'
+  | 'multiple_faces'
+  | 'insufficient_quality';
+
+export interface FaceVerificationResult {
+  status: FaceVerificationState;
+  reason: string;
+  matched: boolean;
+  bbox: FaceBoundingBox | null;
+  message: string;
+}
