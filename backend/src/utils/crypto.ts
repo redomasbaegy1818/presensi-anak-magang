@@ -12,6 +12,7 @@ import { AppError } from './appError.js';
 
 const scryptAsync = promisify(scrypt);
 const SCRYPT_KEYLEN = 64;
+const EPHEMERAL_FALLBACK_SESSION_SECRET = randomBytes(32).toString('hex');
 
 /**
  * Hashes a user password with per-password random salt using Node's built-in scrypt.
@@ -55,7 +56,7 @@ export function createSessionTokenPair(): { token: string; tokenHash: string } {
 }
 
 export function hashSessionToken(token: string): string {
-  const key = env.SESSION_SECRET || 'dev-session-secret-not-for-prod';
+  const key = env.SESSION_SECRET || EPHEMERAL_FALLBACK_SESSION_SECRET;
   return createHmac('sha256', key).update(token, 'utf8').digest('hex');
 }
 

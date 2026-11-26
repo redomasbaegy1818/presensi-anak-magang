@@ -11,4 +11,11 @@ export const corsOptions: CorsOptions = {
 
 export const helmetOptions: HelmetOptions = {
   crossOriginResourcePolicy: { policy: 'same-site' },
+  frameguard: { action: 'deny' },
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'none'"],
+      frameAncestors: ["'none'"],
+    },
+  },
 };

@@ -19,8 +19,6 @@ import { sessionQuerySchema } from '../validation/commonSchemas.js';
 
 export const authRouter = Router();
 
-authRouter.use(authRateLimiter);
-
 authRouter.get(
   '/session',
   validateRequest({ query: sessionQuerySchema }),
@@ -29,16 +27,19 @@ authRouter.get(
 authRouter.get('/me', requireAuth, handleGetSession);
 authRouter.post(
   '/admin/login',
+  authRateLimiter,
   validateRequest({ body: adminLoginSchema }),
   asyncHandler(handleAdminLogin),
 );
 authRouter.post(
   '/login',
+  authRateLimiter,
   validateRequest({ body: participantLoginSchema }),
   asyncHandler(handleParticipantLogin),
 );
 authRouter.post(
   '/register',
+  authRateLimiter,
   validateRequest({ body: participantRegisterSchema }),
   asyncHandler(handleParticipantRegister),
 );

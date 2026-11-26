@@ -17,8 +17,24 @@ const MIME_TO_EXT: Record<string, string> = {
 
 function resolveStorageRoot(): string {
   return path.isAbsolute(env.EVIDENCE_STORAGE_DIR)
-    ? env.EVIDENCE_STORAGE_DIR
+    ? path.resolve(env.EVIDENCE_STORAGE_DIR)
     : path.resolve(BACKEND_ROOT, env.EVIDENCE_STORAGE_DIR);
+}
+
+function resolveSafeEvidencePath(storageKey: string): string | null {
+  if (!storageKey || storageKey.includes('\0') || path.isAbsolute(storageKey)) {
+    return null;
+  }
+
+  const storageRoot = resolveStorageRoot();
+  const resolved = path.resolve(storageRoot, storageKey);
+  if (
+    resolved === storageRoot ||
+    !resolved.startsWith(`${storageRoot}${path.sep}`)
+  ) {
+    return null;
+  }
+  return resolved;
 }
 
 export interface SavedEvidenceFile {
@@ -55,19 +71,18 @@ export async function savePrivateEvidenceFile(
 }
 
 export async function deletePrivateEvidenceFile(storageKey: string): Promise<void> {
-  const storageRoot = resolveStorageRoot();
-  const safeRelative = path.normalize(storageKey).replace(/^(\.\.[/\\])+/, '');
-  const fullPath = path.join(storageRoot, safeRelative);
+  const fullPath = resolveSafeEvidencePath(storageKey);
+  if (!fullPath) {
+    return;
+  }
   await fs.unlink(fullPath).catch(() => undefined);
 }
 
 export async function readPrivateEvidenceFile(
   storageKey: string,
 ): Promise<Buffer | null> {
-  const storageRoot = resolveStorageRoot();
-  const safeRelative = path.normalize(storageKey).replace(/^(\.\.[/\\])+/, '');
-  const fullPath = path.resolve(storageRoot, safeRelative);
-  if (!fullPath.startsWith(storageRoot)) {
+  const fullPath = resolveSafeEvidencePath(storageKey);
+  if (!fullPath) {
     return null;
   }
   try {

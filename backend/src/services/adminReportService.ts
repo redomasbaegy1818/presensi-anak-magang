@@ -605,6 +605,13 @@ function buildFilterDescriptor(report: AdminAttendanceReportResponse): {
   };
 }
 
+function sanitizeSpreadsheetCell(value: string): string {
+  if (/^[=+\-@\t\r]/.test(value)) {
+    return `'${value}`;
+  }
+  return value;
+}
+
 async function generateExcelBuffer(
   report: AdminAttendanceReportResponse,
 ): Promise<Buffer> {
@@ -628,8 +635,11 @@ async function generateExcelBuffer(
     'Periode Tanggal',
     `${formatDateShort(report.filters.startDate)} – ${formatDateShort(report.filters.endDate)}`,
   ]);
-  summarySheet.addRow(['Divisi', meta.divisionLabel]);
-  summarySheet.addRow(['Peserta', meta.participantLabel]);
+  summarySheet.addRow(['Divisi', sanitizeSpreadsheetCell(meta.divisionLabel)]);
+  summarySheet.addRow([
+    'Peserta',
+    sanitizeSpreadsheetCell(meta.participantLabel),
+  ]);
   summarySheet.addRow(['Filter Status', meta.statusLabel]);
   summarySheet.addRow(['Dicetak Pada', meta.generatedLabel]);
   summarySheet.addRow([]);
@@ -674,8 +684,8 @@ async function generateExcelBuffer(
     report.groupedRows.forEach((row, index) => {
       summarySheet.addRow([
         index + 1,
-        row.label,
-        row.secondaryLabel,
+        sanitizeSpreadsheetCell(row.label),
+        sanitizeSpreadsheetCell(row.secondaryLabel),
         row.presentCount,
         row.lateCount,
         row.absentCount,
@@ -735,9 +745,9 @@ async function generateExcelBuffer(
       detailSheet.addRow([
         index + 1,
         formatDateShort(row.attendanceDate),
-        row.participantName,
-        row.nimNis,
-        row.division,
+        sanitizeSpreadsheetCell(row.participantName),
+        sanitizeSpreadsheetCell(row.nimNis),
+        sanitizeSpreadsheetCell(row.division),
         formatWibTime(row.checkInAt),
         formatWibTime(row.checkOutAt),
         formatStatusLabel(row.status),

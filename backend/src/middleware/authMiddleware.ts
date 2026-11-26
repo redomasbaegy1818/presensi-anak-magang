@@ -61,8 +61,11 @@ export function requireRole(...allowedRoles: UserRole[]) {
   };
 }
 
+const EXPECTED_APP_ORIGIN = new URL(env.APP_ORIGIN).origin;
+
 /**
- * Mitigates CSRF on cookie-authenticated mutations by checking Origin when supplied.
+ * Mitigates CSRF on cookie-authenticated mutations by checking Fetch Metadata,
+ * Origin, and fallback Referer headers against the configured APP_ORIGIN.
  */
 export function requireSameOriginOnMutation(
   req: Request,
@@ -75,10 +78,34 @@ export function requireSameOriginOnMutation(
     return;
   }
 
-  const origin = req.get('origin');
-  if (origin && origin !== env.APP_ORIGIN) {
-    next(AppError.forbidden('Asal permintaan tidak diizinkan.'));
+  const fetchSite = req.get('sec-fetch-site');
+  if (fetchSite && fetchSite.toLowerCase() === 'cross-site') {
+    next(AppError.forbidden('Asal permintaan lintas situs tidak diizinkan.'));
     return;
+  }
+
+  const origin = req.get('origin');
+  if (origin !== undefined) {
+    if (origin !== EXPECTED_APP_ORIGIN) {
+      next(AppError.forbidden('Asal permintaan tidak diizinkan.'));
+      return;
+    }
+    next();
+    return;
+  }
+
+  const referer = req.get('referer');
+  if (referer) {
+    try {
+      const refererOrigin = new URL(referer).origin;
+      if (refererOrigin !== EXPECTED_APP_ORIGIN) {
+        next(AppError.forbidden('Referrer permintaan tidak diizinkan.'));
+        return;
+      }
+    } catch {
+      next(AppError.forbidden('Referrer permintaan tidak valid.'));
+      return;
+    }
   }
 
   next();
