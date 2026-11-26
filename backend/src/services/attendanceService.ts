@@ -9,10 +9,13 @@ import {
 import { findParticipantById } from '../repositories/participantRepository.js';
 import { getOrCreateAttendanceSetting } from '../repositories/settingsRepository.js';
 import { AppError } from '../utils/appError.js';
+import { getWibDateTimeParts } from '../utils/dateWib.js';
 import {
-  getWibDateTimeParts,
-  parseHhMmToMinutes,
-} from '../utils/dateWib.js';
+  assertCheckOutWithinRules,
+  evaluateCheckInStatusByRules,
+  toPublicAttendanceRules,
+  type PublicAttendanceRules,
+} from './attendanceRules.js';
 import {
   deletePrivateEvidenceFile,
   savePrivateEvidenceFile,
@@ -40,13 +43,7 @@ export interface TodayAttendanceSummary {
   faceRegistered: boolean;
   participantActive: boolean;
   withinInternshipPeriod: boolean;
-  rules: {
-    checkInStartTime: string;
-    workStartTime: string;
-    lateToleranceMinutes: number;
-    workEndTime: string;
-    checkOutEndTime: string;
-  };
+  rules: PublicAttendanceRules;
   todayRecord: PublicAttendanceSummaryItem | null;
 }
 
@@ -105,13 +102,7 @@ export async function getParticipantTodayAttendance(
     participantActive:
       participant.status === 'ACTIVE' && participant.user.isActive,
     withinInternshipPeriod,
-    rules: {
-      checkInStartTime: setting.checkInStartTime,
-      workStartTime: setting.workStartTime,
-      lateToleranceMinutes: setting.lateToleranceMinutes,
-      workEndTime: setting.workEndTime,
-      checkOutEndTime: setting.checkOutEndTime,
-    },
+    rules: toPublicAttendanceRules(setting),
     todayRecord: existing
       ? {
           id: existing.id,
@@ -199,34 +190,12 @@ export async function markParticipantAttendance(
   }
 
   const setting = await getOrCreateAttendanceSetting();
-  const checkInStartMin = parseHhMmToMinutes(setting.checkInStartTime);
-  const workStartMin = parseHhMmToMinutes(setting.workStartTime);
-  const lateDeadlineMin = workStartMin + setting.lateToleranceMinutes;
-  const workEndMin = parseHhMmToMinutes(setting.workEndTime);
-  const checkOutEndMin = parseHhMmToMinutes(setting.checkOutEndTime);
 
   let checkInStatus: AttendanceStatus = 'PRESENT';
   if (attendanceType === 'CHECK_IN') {
-    if (wib.minutesOfDay < checkInStartMin) {
-      throw AppError.badRequest(
-        `Presensi masuk belum dibuka. Layanan dibuka mulai pukul ${setting.checkInStartTime} WIB.`,
-        'BEFORE_ATTENDANCE_START',
-      );
-    }
-    if (wib.minutesOfDay > workEndMin) {
-      throw AppError.badRequest(
-        `Batas waktu presensi masuk telah berakhir pada pukul ${setting.workEndTime} WIB.`,
-        'AFTER_ATTENDANCE_END',
-      );
-    }
-    checkInStatus = wib.minutesOfDay <= lateDeadlineMin ? 'PRESENT' : 'LATE';
+    checkInStatus = evaluateCheckInStatusByRules(setting, wib.minutesOfDay);
   } else {
-    if (wib.minutesOfDay > checkOutEndMin) {
-      throw AppError.badRequest(
-        `Batas waktu presensi pulang telah berakhir pada pukul ${setting.checkOutEndTime} WIB.`,
-        'AFTER_ATTENDANCE_END',
-      );
-    }
+    assertCheckOutWithinRules(setting, wib.minutesOfDay);
   }
 
   const verification = await verifyParticipantFaceInternal(

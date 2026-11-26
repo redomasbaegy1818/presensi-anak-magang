@@ -2,6 +2,7 @@ import { env } from '../config/env.js';
 import { prisma } from '../lib/prisma.js';
 import { getOrCreateAttendanceSetting } from '../repositories/settingsRepository.js';
 import { getWibDateTimeParts } from '../utils/dateWib.js';
+import { toPublicAttendanceRules } from './attendanceRules.js';
 
 export async function getAdminOverviewSummary(now: Date = new Date()) {
   const wib = getWibDateTimeParts(now, env.OFFICE_TIMEZONE);
@@ -67,13 +68,7 @@ export async function getAdminOverviewSummary(now: Date = new Date()) {
   return {
     timezone: env.OFFICE_TIMEZONE,
     attendanceDate: wib.dateStr,
-    rules: {
-      checkInStartTime: setting.checkInStartTime,
-      workStartTime: setting.workStartTime,
-      lateToleranceMinutes: setting.lateToleranceMinutes,
-      workEndTime: setting.workEndTime,
-      checkOutEndTime: setting.checkOutEndTime,
-    },
+    rules: toPublicAttendanceRules(setting),
     summary: {
       activeParticipants,
       attendedToday,

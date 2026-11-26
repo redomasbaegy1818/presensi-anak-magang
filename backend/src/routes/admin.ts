@@ -7,10 +7,12 @@ import {
   handleGetAdminOverview,
   handleGetAdminParticipantDetail,
   handleGetAdminReports,
+  handleGetAdminSettings,
   handleListAdminAttendance,
   handleListAdminParticipants,
   handleUpdateAdminParticipant,
   handleUpdateAdminParticipantStatus,
+  handleUpdateAdminSettings,
 } from '../controllers/adminController.js';
 import { requireAuth, requireRole } from '../middleware/authMiddleware.js';
 import { validateRequest } from '../middleware/validateRequest.js';
@@ -24,6 +26,7 @@ import {
   adminReportExportQuerySchema,
   adminReportQuerySchema,
   adminUpdateParticipantSchema,
+  adminUpdateSettingsSchema,
 } from '../validation/adminSchemas.js';
 import { idParamSchema } from '../validation/commonSchemas.js';
 
@@ -84,4 +87,11 @@ adminRouter.get(
   '/reports/export',
   validateRequest({ query: adminReportExportQuerySchema }),
   asyncHandler(handleExportAdminReports),
+);
+
+adminRouter.get('/settings', asyncHandler(handleGetAdminSettings));
+adminRouter.put(
+  '/settings',
+  validateRequest({ body: adminUpdateSettingsSchema }),
+  asyncHandler(handleUpdateAdminSettings),
 );

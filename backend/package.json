@@ -20,7 +20,8 @@
     "test:admin-dashboard": "tsx src/scripts/testAdminDashboard.ts",
     "test:admin-participants": "tsx src/scripts/testAdminParticipants.ts",
     "test:admin-attendance": "tsx src/scripts/testAdminAttendance.ts",
-    "test:admin-reports": "tsx src/scripts/testAdminReports.ts"
+    "test:admin-reports": "tsx src/scripts/testAdminReports.ts",
+    "test:admin-settings": "tsx src/scripts/testAdminSettings.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.6.0",

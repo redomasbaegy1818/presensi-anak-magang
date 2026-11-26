@@ -17,6 +17,10 @@ import {
   getAdminAttendanceReport,
 } from '../services/adminReportService.js';
 import { getAdminOverviewSummary } from '../services/adminService.js';
+import {
+  getAdminAttendanceSettings,
+  updateAdminAttendanceSettings,
+} from '../services/adminSettingsService.js';
 import { AppError } from '../utils/appError.js';
 import type {
   AdminAttendanceQuery,
@@ -26,6 +30,7 @@ import type {
   AdminReportExportQuery,
   AdminReportQuery,
   AdminUpdateParticipantInput,
+  AdminUpdateSettingsInput,
 } from '../validation/adminSchemas.js';
 
 export async function handleGetAdminOverview(
@@ -145,4 +150,27 @@ export async function handleExportAdminReports(
   res.setHeader('Cache-Control', 'no-store');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.status(200).send(buffer);
+}
+
+export async function handleGetAdminSettings(
+  _req: Request,
+  res: Response,
+): Promise<void> {
+  const result = await getAdminAttendanceSettings();
+  res.status(200).json(result);
+}
+
+export async function handleUpdateAdminSettings(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  if (!req.authUser) {
+    throw AppError.unauthorized();
+  }
+  const body = req.body as AdminUpdateSettingsInput;
+  const result = await updateAdminAttendanceSettings(
+    req.authUser.userId,
+    body,
+  );
+  res.status(200).json(result);
 }

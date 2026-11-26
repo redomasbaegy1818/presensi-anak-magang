@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { validateAttendanceRuleLogic } from '../services/attendanceRules.js';
 import {
   isValidCalendarDate,
   normalizePhone,
@@ -221,6 +222,28 @@ export const adminReportExportQuerySchema = adminReportQuerySchema.and(
   }),
 );
 
+export const adminUpdateSettingsSchema = z
+  .object({
+    checkInStartTime: z.string().trim(),
+    workStartTime: z.string().trim(),
+    lateToleranceMinutes: z.coerce
+      .number()
+      .int('Toleransi keterlambatan harus berupa bilangan bulat (menit).'),
+    workEndTime: z.string().trim(),
+    checkOutEndTime: z.string().trim(),
+    saveEvidence: z.boolean(),
+  })
+  .superRefine((data, ctx) => {
+    const issues = validateAttendanceRuleLogic(data);
+    for (const issue of issues) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [issue.field],
+        message: issue.message,
+      });
+    }
+  });
+
 export type AdminParticipantsQuery = z.infer<typeof adminParticipantsQuerySchema>;
 export type AdminUpdateParticipantInput = z.infer<
   typeof adminUpdateParticipantSchema
@@ -235,4 +258,7 @@ export type AdminCorrectAttendanceInput = z.infer<
 export type AdminReportQuery = z.infer<typeof adminReportQuerySchema>;
 export type AdminReportExportQuery = z.infer<
   typeof adminReportExportQuerySchema
+>;
+export type AdminUpdateSettingsInput = z.infer<
+  typeof adminUpdateSettingsSchema
 >;
