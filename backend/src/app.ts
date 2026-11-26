@@ -2,6 +2,7 @@ import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
+import { env } from './config/env.js';
 import { corsOptions, helmetOptions } from './config/security.js';
 import {
   attachAuthContext,
@@ -16,6 +17,9 @@ export function createApp() {
   const app = express();
 
   app.disable('x-powered-by');
+  if (env.TRUST_PROXY > 0) {
+    app.set('trust proxy', env.TRUST_PROXY);
+  }
   app.use(helmet(helmetOptions));
   app.use(cors(corsOptions));
   app.use(cookieParser());

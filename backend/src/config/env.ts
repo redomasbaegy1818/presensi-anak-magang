@@ -15,7 +15,9 @@ function hasPlaceholder(value: string): boolean {
 const envSchema = z
   .object({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+    HOST: z.string().min(1).default('0.0.0.0'),
     PORT: z.coerce.number().int().min(1).max(65535).default(4000),
+    TRUST_PROXY: z.coerce.number().int().min(0).max(5).default(0),
     APP_ORIGIN: z.string().url().default('http://localhost:5173'),
     OFFICE_TIMEZONE: z.string().min(1).default('Asia/Jakarta'),
     DATABASE_URL: z.string().optional().default(''),
