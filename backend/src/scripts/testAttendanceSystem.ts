@@ -60,9 +60,12 @@ async function runTests() {
   let createdUserId: string | null = null;
   let createdParticipantId: string | null = null;
   const evidenceKeysToClean: string[] = [];
+  const originalSetting = await prisma.attendanceSetting.findUnique({
+    where: { id: 1 },
+  });
 
   try {
-    // Ensure AttendanceSetting row id=1 uses 08:00 / 10m / 17:00 defaults
+    // Ensure AttendanceSetting row id=1 uses 08:00 / 10m / 17:00 defaults during test
     const setting = await prisma.attendanceSetting.upsert({
       where: { id: 1 },
       create: {
@@ -76,7 +79,13 @@ async function runTests() {
         saveEvidence: true,
       },
       update: {
+        checkInStartTime: '06:00',
+        workStartTime: '08:00',
         lateToleranceMinutes: 10,
+        workEndTime: '17:00',
+        checkOutEndTime: '21:00',
+        faceMatchThreshold: 0.5,
+        saveEvidence: true,
       },
     });
     assert.equal(setting.lateToleranceMinutes, 10);
@@ -335,6 +344,21 @@ async function runTests() {
     }
     if (createdUserId) {
       await prisma.user.deleteMany({ where: { id: createdUserId } });
+    }
+    if (originalSetting) {
+      await prisma.attendanceSetting.update({
+        where: { id: 1 },
+        data: {
+          checkInStartTime: originalSetting.checkInStartTime,
+          workStartTime: originalSetting.workStartTime,
+          lateToleranceMinutes: originalSetting.lateToleranceMinutes,
+          workEndTime: originalSetting.workEndTime,
+          checkOutEndTime: originalSetting.checkOutEndTime,
+          faceMatchThreshold: originalSetting.faceMatchThreshold,
+          saveEvidence: originalSetting.saveEvidence,
+          updatedById: originalSetting.updatedById,
+        },
+      });
     }
     await prisma.$disconnect();
   }

@@ -15,6 +15,7 @@
     "db:verify": "tsx src/scripts/verifyDatabase.ts",
     "db:seed-admin": "tsx src/scripts/seedAdmin.ts",
     "db:reset-password": "tsx src/scripts/resetUserPassword.ts",
+    "smtp:verify": "tsx src/scripts/verifySmtp.ts",
     "test:admin-auth": "tsx src/scripts/testAdminAuth.ts",
     "test:participant-reg": "tsx src/scripts/testParticipantRegistration.ts",
     "test:attendance": "tsx src/scripts/testAttendanceSystem.ts",

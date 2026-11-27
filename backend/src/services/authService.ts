@@ -1,3 +1,4 @@
+import { randomInt } from 'node:crypto';
 import { Prisma } from '@prisma/client';
 import { env } from '../config/env.js';
 import {
@@ -8,24 +9,29 @@ import {
 import {
   createParticipantWithUser,
   findDuplicateParticipantConflicts,
+  findParticipantByEmailAndNimNis,
   findParticipantByUserId,
 } from '../repositories/participantRepository.js';
 import {
   consumePasswordResetTokenAndUpdatePassword,
   createPasswordResetToken,
+  findActiveResetTokenForUser,
   findValidPasswordResetToken,
+  incrementResetCodeAttempts,
 } from '../repositories/passwordResetRepository.js';
 import { AppError } from '../utils/appError.js';
 import {
   createSessionTokenPair,
   hashPassword,
   hashSessionToken,
+  safeCompareStrings,
   verifyPassword,
 } from '../utils/crypto.js';
 import {
   normalizePhone,
   type ParticipantRegisterInput,
 } from '../validation/authSchemas.js';
+import { verifyParticipantFaceInternal } from './faceVerificationService.js';
 import { isSmtpConfigured, sendPasswordResetEmail } from './mailerService.js';
 import type { AuthUserContext } from './sessionService.js';
 
@@ -277,12 +283,15 @@ export async function requestPasswordReset(
 
   if (eligible && user) {
     const { token, tokenHash } = createSessionTokenPair();
+    const verificationCode = randomInt(100000, 1000000).toString();
+    const codeHash = hashSessionToken(`${user.id}:${verificationCode}`);
     const expiresInMinutes = env.PASSWORD_RESET_TTL_MINUTES;
     const expiresAt = new Date(Date.now() + expiresInMinutes * 60 * 1000);
 
     await createPasswordResetToken({
       userId: user.id,
       tokenHash,
+      codeHash,
       expiresAt,
     });
 
@@ -292,6 +301,7 @@ export async function requestPasswordReset(
         to: user.email,
         recipientName,
         portal,
+        verificationCode,
         resetUrl,
         expiresInMinutes,
       });
@@ -302,9 +312,180 @@ export async function requestPasswordReset(
 
   return {
     smtpConfigured,
+    expiresInMinutes: env.PASSWORD_RESET_TTL_MINUTES,
     message: smtpConfigured
-      ? 'Jika akun ditemukan dan aktif, tautan pengaturan ulang kata sandi telah dikirimkan ke email terdaftar.'
-      : 'Permintaan diproses. Layanan email kantor belum diaktifkan — hubungi admin kantor (untuk peserta) atau cek konsol server backend saat pengembangan.',
+      ? 'Jika akun terdaftar dan aktif, kami telah mengirimkan kode verifikasi 6 digit serta tautan reset kata sandi ke email Anda.'
+      : 'Permintaan diproses. Layanan email kantor belum dikonfigurasi — masukkan kode 6 digit / tautan dari konsol server backend (dev), atau minta tautan reset kepada Admin kantor.',
+  };
+}
+
+const MAX_RESET_CODE_ATTEMPTS = 5;
+
+async function validateActiveUserAndResetCode(
+  identifier: string,
+  portal: 'PARTICIPANT' | 'ADMIN',
+  code: string,
+) {
+  const user = await findUserByIdentifier(identifier);
+  if (!user || !user.isActive || user.role !== portal) {
+    throw AppError.badRequest(
+      'Kode verifikasi tidak valid atau sudah kedaluwarsa.',
+      'INVALID_RESET_CODE',
+    );
+  }
+
+  let accountLabel = user.username || user.email;
+  if (user.role === 'PARTICIPANT') {
+    const participant = await findParticipantByUserId(user.id);
+    if (!participant || participant.status !== 'ACTIVE') {
+      throw AppError.badRequest(
+        'Kode verifikasi tidak valid atau sudah kedaluwarsa.',
+        'INVALID_RESET_CODE',
+      );
+    }
+    accountLabel = participant.fullName;
+  }
+
+  const activeToken = await findActiveResetTokenForUser(user.id);
+  if (!activeToken || !activeToken.codeHash) {
+    throw AppError.badRequest(
+      'Kode verifikasi tidak valid atau sudah kedaluwarsa.',
+      'INVALID_RESET_CODE',
+    );
+  }
+
+  const submittedCodeHash = hashSessionToken(`${user.id}:${code.trim()}`);
+  if (!safeCompareStrings(activeToken.codeHash, submittedCodeHash)) {
+    const nextAttempts = activeToken.codeAttempts + 1;
+    await incrementResetCodeAttempts(
+      activeToken.id,
+      nextAttempts,
+      MAX_RESET_CODE_ATTEMPTS,
+    );
+    if (nextAttempts >= MAX_RESET_CODE_ATTEMPTS) {
+      throw AppError.badRequest(
+        'Terlalu banyak percobaan kode salah. Silakan minta kode verifikasi baru.',
+        'RESET_CODE_LOCKED',
+      );
+    }
+    throw AppError.badRequest(
+      'Kode verifikasi tidak valid atau sudah kedaluwarsa.',
+      'INVALID_RESET_CODE',
+    );
+  }
+
+  return {
+    tokenId: activeToken.id,
+    userId: user.id,
+    portal: user.role,
+    accountLabel,
+    expiresAt: activeToken.expiresAt.toISOString(),
+  };
+}
+
+export async function verifyPasswordResetCode(
+  identifier: string,
+  portal: 'PARTICIPANT' | 'ADMIN',
+  code: string,
+) {
+  const validated = await validateActiveUserAndResetCode(
+    identifier,
+    portal,
+    code,
+  );
+  return {
+    valid: true,
+    portal: validated.portal,
+    accountLabel: validated.accountLabel,
+    expiresAt: validated.expiresAt,
+  };
+}
+
+export async function confirmPasswordResetWithCode(
+  identifier: string,
+  portal: 'PARTICIPANT' | 'ADMIN',
+  code: string,
+  newPassword: string,
+) {
+  const validated = await validateActiveUserAndResetCode(
+    identifier,
+    portal,
+    code,
+  );
+  const newPasswordHash = await hashPassword(newPassword);
+
+  await consumePasswordResetTokenAndUpdatePassword({
+    tokenId: validated.tokenId,
+    userId: validated.userId,
+    newPasswordHash,
+  });
+
+  return {
+    portal: validated.portal,
+    message:
+      'Kata sandi berhasil diperbarui. Silakan masuk menggunakan kata sandi baru Anda.',
+  };
+}
+
+export async function verifyParticipantFaceForReset(
+  email: string,
+  nimNis: string,
+  imageBuffer: Buffer,
+  mimeType: string,
+  filename: string,
+) {
+  const participant = await findParticipantByEmailAndNimNis(email, nimNis);
+
+  if (
+    !participant ||
+    !participant.user.isActive ||
+    participant.status !== 'ACTIVE'
+  ) {
+    throw AppError.badRequest(
+      'Data peserta tidak cocok atau akun sedang nonaktif. Periksa kembali Email dan NIM/NIS Anda.',
+      'FACE_RESET_PARTICIPANT_NOT_FOUND',
+    );
+  }
+
+  if (!participant.faceTemplate) {
+    throw AppError.badRequest(
+      'Akun ini belum memiliki data wajah terdaftar. Silakan minta tautan reset kata sandi kepada Admin kantor.',
+      'FACE_NOT_REGISTERED',
+    );
+  }
+
+  const verification = await verifyParticipantFaceInternal(
+    participant.id,
+    imageBuffer,
+    mimeType,
+    filename,
+  );
+
+  if (!verification.matched) {
+    return {
+      verified: false,
+      verificationStatus: verification.status,
+      bbox: verification.bbox,
+      message: verification.message,
+    };
+  }
+
+  const { token, tokenHash } = createSessionTokenPair();
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+  await createPasswordResetToken({
+    userId: participant.userId,
+    tokenHash,
+    expiresAt,
+  });
+
+  return {
+    verified: true,
+    verificationStatus: verification.status,
+    bbox: verification.bbox,
+    resetToken: token,
+    accountLabel: participant.fullName,
+    message: 'Verifikasi wajah berhasil! Silakan buat kata sandi baru Anda.',
   };
 }
 

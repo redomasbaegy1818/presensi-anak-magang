@@ -149,8 +149,45 @@ export const resetPasswordSchema = z.object({
     .max(256, 'Kata sandi terlalu panjang.'),
 });
 
+export const verifyResetCodeSchema = z.object({
+  identifier: z
+    .string()
+    .trim()
+    .min(1, 'Email atau username wajib diisi.')
+    .max(255, 'Email atau username terlalu panjang.'),
+  portal: z.enum(['PARTICIPANT', 'ADMIN']).default('PARTICIPANT'),
+  code: z
+    .string()
+    .trim()
+    .regex(/^\d{6}$/, 'Kode verifikasi harus berupa 6 digit angka.'),
+});
+
+export const resetPasswordWithCodeSchema = verifyResetCodeSchema.extend({
+  password: z
+    .string()
+    .min(8, 'Kata sandi baru minimal 8 karakter.')
+    .max(256, 'Kata sandi terlalu panjang.'),
+});
+
+export const verifyFaceResetSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .min(1, 'Email wajib diisi.')
+    .email('Format email tidak valid.')
+    .max(255, 'Email terlalu panjang.'),
+  nimNis: z
+    .string()
+    .trim()
+    .min(3, 'NIM/NIS wajib diisi minimal 3 karakter.')
+    .max(50, 'NIM/NIS terlalu panjang.'),
+});
+
 export type AdminLoginInput = z.infer<typeof adminLoginSchema>;
 export type ParticipantLoginInput = z.infer<typeof participantLoginSchema>;
 export type ParticipantRegisterInput = z.infer<typeof participantRegisterSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+export type VerifyResetCodeInput = z.infer<typeof verifyResetCodeSchema>;
+export type ResetPasswordWithCodeInput = z.infer<typeof resetPasswordWithCodeSchema>;
+export type VerifyFaceResetInput = z.infer<typeof verifyFaceResetSchema>;

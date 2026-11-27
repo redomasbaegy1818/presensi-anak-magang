@@ -223,6 +223,8 @@ model PasswordResetToken {
   id               String    @id @default(cuid())
   userId           String
   tokenHash        String    @unique
+  codeHash         String?
+  codeAttempts     Int       @default(0)
   expiresAt        DateTime
   usedAt           DateTime?
   createdByAdminId String?

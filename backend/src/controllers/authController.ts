@@ -2,14 +2,18 @@ import type { Request, Response } from 'express';
 import { env } from '../config/env.js';
 import {
   confirmPasswordReset,
+  confirmPasswordResetWithCode,
   loginAdmin,
   loginParticipant,
   logoutByToken,
   registerParticipant,
   requestPasswordReset,
+  verifyParticipantFaceForReset,
+  verifyPasswordResetCode,
   verifyPasswordResetToken,
 } from '../services/authService.js';
 import { buildSessionSummary } from '../services/sessionService.js';
+import { AppError } from '../utils/appError.js';
 import { clearSessionCookie, setSessionCookie } from '../utils/cookies.js';
 import type {
   AdminLoginInput,
@@ -17,6 +21,9 @@ import type {
   ParticipantLoginInput,
   ParticipantRegisterInput,
   ResetPasswordInput,
+  ResetPasswordWithCodeInput,
+  VerifyFaceResetInput,
+  VerifyResetCodeInput,
 } from '../validation/authSchemas.js';
 
 export function handleGetSession(req: Request, res: Response): void {
@@ -109,5 +116,51 @@ export async function handleResetPassword(
   const { token, password } = req.body as ResetPasswordInput;
   const result = await confirmPasswordReset(token, password);
   clearSessionCookie(res);
+  res.status(200).json(result);
+}
+
+export async function handleVerifyResetCode(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const { identifier, portal, code } = req.body as VerifyResetCodeInput;
+  const result = await verifyPasswordResetCode(identifier, portal, code);
+  res.status(200).json(result);
+}
+
+export async function handleResetPasswordWithCode(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const { identifier, portal, code, password } =
+    req.body as ResetPasswordWithCodeInput;
+  const result = await confirmPasswordResetWithCode(
+    identifier,
+    portal,
+    code,
+    password,
+  );
+  clearSessionCookie(res);
+  res.status(200).json(result);
+}
+
+export async function handleVerifyFaceReset(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  if (!req.file) {
+    throw AppError.badRequest(
+      'Foto wajah wajib dikirimkan untuk verifikasi.',
+      'IMAGE_REQUIRED',
+    );
+  }
+  const { email, nimNis } = req.body as VerifyFaceResetInput;
+  const result = await verifyParticipantFaceForReset(
+    email,
+    nimNis,
+    req.file.buffer,
+    req.file.mimetype,
+    req.file.originalname,
+  );
   res.status(200).json(result);
 }

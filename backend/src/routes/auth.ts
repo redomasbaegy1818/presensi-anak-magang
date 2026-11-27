@@ -7,10 +7,14 @@ import {
   handleParticipantLogin,
   handleParticipantRegister,
   handleResetPassword,
+  handleResetPasswordWithCode,
+  handleVerifyFaceReset,
+  handleVerifyResetCode,
   handleVerifyResetToken,
 } from '../controllers/authController.js';
 import { requireAuth } from '../middleware/authMiddleware.js';
 import { authRateLimiter } from '../middleware/rateLimiter.js';
+import { uploadSingleFaceImage } from '../middleware/uploadMiddleware.js';
 import { validateRequest } from '../middleware/validateRequest.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import {
@@ -19,6 +23,9 @@ import {
   participantLoginSchema,
   participantRegisterSchema,
   resetPasswordSchema,
+  resetPasswordWithCodeSchema,
+  verifyFaceResetSchema,
+  verifyResetCodeSchema,
   verifyResetTokenQuerySchema,
 } from '../validation/authSchemas.js';
 import { sessionQuerySchema } from '../validation/commonSchemas.js';
@@ -66,4 +73,23 @@ authRouter.post(
   authRateLimiter,
   validateRequest({ body: resetPasswordSchema }),
   asyncHandler(handleResetPassword),
+);
+authRouter.post(
+  '/reset-password/verify-code',
+  authRateLimiter,
+  validateRequest({ body: verifyResetCodeSchema }),
+  asyncHandler(handleVerifyResetCode),
+);
+authRouter.post(
+  '/reset-password/with-code',
+  authRateLimiter,
+  validateRequest({ body: resetPasswordWithCodeSchema }),
+  asyncHandler(handleResetPasswordWithCode),
+);
+authRouter.post(
+  '/reset-password/verify-face',
+  authRateLimiter,
+  uploadSingleFaceImage,
+  validateRequest({ body: verifyFaceResetSchema }),
+  asyncHandler(handleVerifyFaceReset),
 );

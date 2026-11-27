@@ -3,6 +3,7 @@ import { prisma } from '../lib/prisma.js';
 export async function createPasswordResetToken(input: {
   userId: string;
   tokenHash: string;
+  codeHash?: string;
   expiresAt: Date;
   createdByAdminId?: string;
 }) {
@@ -20,6 +21,7 @@ export async function createPasswordResetToken(input: {
       data: {
         userId: input.userId,
         tokenHash: input.tokenHash,
+        codeHash: input.codeHash ?? null,
         expiresAt: input.expiresAt,
         createdByAdminId: input.createdByAdminId ?? null,
       },
@@ -28,6 +30,39 @@ export async function createPasswordResetToken(input: {
         expiresAt: true,
       },
     });
+  });
+}
+
+export async function findActiveResetTokenForUser(userId: string) {
+  return prisma.passwordResetToken.findFirst({
+    where: {
+      userId,
+      usedAt: null,
+      codeHash: { not: null },
+      expiresAt: { gt: new Date() },
+    },
+    orderBy: { createdAt: 'desc' },
+    select: {
+      id: true,
+      userId: true,
+      codeHash: true,
+      codeAttempts: true,
+      expiresAt: true,
+    },
+  });
+}
+
+export async function incrementResetCodeAttempts(
+  tokenId: string,
+  nextAttempts: number,
+  maxAttempts: number = 5,
+) {
+  await prisma.passwordResetToken.update({
+    where: { id: tokenId },
+    data: {
+      codeAttempts: nextAttempts,
+      ...(nextAttempts >= maxAttempts ? { usedAt: new Date() } : {}),
+    },
   });
 }
 

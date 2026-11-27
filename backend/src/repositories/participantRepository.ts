@@ -96,6 +96,25 @@ export async function findParticipantByUserId(userId: string) {
   });
 }
 
+export async function findParticipantByEmailAndNimNis(
+  email: string,
+  nimNis: string,
+) {
+  const cleanEmail = normalizeEmail(email);
+  const cleanNimNis = normalizeNimNis(nimNis);
+
+  return prisma.participant.findFirst({
+    where: {
+      nimNis: cleanNimNis,
+      user: {
+        email: cleanEmail,
+        role: 'PARTICIPANT',
+      },
+    },
+    select: PUBLIC_PARTICIPANT_SELECT,
+  });
+}
+
 export async function findDuplicateParticipantConflicts(
   email: string,
   nimNis: string,
