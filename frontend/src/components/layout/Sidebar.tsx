@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { BrandLogo } from '../ui/BrandLogo.tsx';
+import { UserAvatar } from '../ui/UserAvatar.tsx';
 
 export interface NavItem {
   id: string;
@@ -14,6 +15,9 @@ export interface SidebarProps {
   brandSubtitle?: string;
   items: NavItem[];
   onNavigate?: (id: string) => void;
+  collapsed?: boolean;
+  userName?: string;
+  userRoleLabel?: string;
   mobileOpen?: boolean;
   onCloseMobile?: () => void;
 }
@@ -23,25 +27,41 @@ export function Sidebar({
   brandSubtitle = 'Verifikasi Wajah',
   items,
   onNavigate,
+  collapsed = false,
+  userName,
+  userRoleLabel,
   mobileOpen = false,
   onCloseMobile,
 }: SidebarProps) {
-  const navContent = (
+  const renderContent = (isCollapsed: boolean) => (
     <div className="flex h-full flex-col bg-white border-r border-[var(--color-border)]">
-      <div className="h-[var(--topbar-height)] flex items-center justify-between px-4 border-b border-[var(--color-border)]">
-        <div className="flex items-center gap-2.5">
+      <div
+        className={[
+          'h-[var(--topbar-height)] flex items-center border-b border-[var(--color-border)] shrink-0',
+          isCollapsed ? 'justify-center px-2' : 'justify-between px-4',
+        ].join(' ')}
+      >
+        <div
+          className={[
+            'flex items-center min-w-0',
+            isCollapsed ? 'justify-center' : 'gap-2.5',
+          ].join(' ')}
+          title={isCollapsed ? `${brandTitle} — ${brandSubtitle}` : undefined}
+        >
           <BrandLogo size="sm" />
-          <div>
-            <p className="text-sm font-semibold text-[var(--color-text-primary)] leading-tight">
-              {brandTitle}
-            </p>
-            <p className="text-xs text-[var(--color-text-muted)] leading-tight">
-              {brandSubtitle}
-            </p>
-          </div>
+          {!isCollapsed && (
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-[var(--color-text-primary)] leading-tight truncate">
+                {brandTitle}
+              </p>
+              <p className="text-xs text-[var(--color-text-muted)] leading-tight truncate">
+                {brandSubtitle}
+              </p>
+            </div>
+          )}
         </div>
 
-        {onCloseMobile && (
+        {!isCollapsed && onCloseMobile && (
           <button
             type="button"
             onClick={onCloseMobile}
@@ -67,6 +87,8 @@ export function Sidebar({
               <a
                 href={item.href}
                 aria-current={item.active ? 'page' : undefined}
+                aria-label={isCollapsed ? item.label : undefined}
+                title={isCollapsed ? item.label : undefined}
                 onClick={(e) => {
                   if (onNavigate) {
                     e.preventDefault();
@@ -75,10 +97,13 @@ export function Sidebar({
                   }
                 }}
                 className={[
-                  'flex items-center gap-2.5 min-h-10 px-3 py-2 rounded-[var(--radius-md)] text-sm border-l-3 transition-all duration-150',
+                  'flex items-center min-h-10 py-2 rounded-[var(--radius-md)] text-sm border-l-3 transition-all duration-150',
+                  isCollapsed ? 'justify-center px-2' : 'gap-2.5 px-3',
                   item.active
                     ? 'border-[var(--color-accent)] bg-[var(--color-accent-subtle)] text-[var(--color-accent-text)] font-semibold'
-                    : 'border-transparent text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-subtle)] hover:text-[var(--color-text-primary)] hover:translate-x-0.5 font-medium',
+                    : isCollapsed
+                      ? 'border-transparent text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-subtle)] hover:text-[var(--color-text-primary)] font-medium'
+                      : 'border-transparent text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-subtle)] hover:text-[var(--color-text-primary)] hover:translate-x-0.5 font-medium',
                 ].join(' ')}
               >
                 {item.icon && (
@@ -86,19 +111,61 @@ export function Sidebar({
                     {item.icon}
                   </span>
                 )}
-                <span>{item.label}</span>
+                {!isCollapsed && <span className="truncate">{item.label}</span>}
               </a>
             </li>
           ))}
         </ul>
       </nav>
+
+      {(userName || userRoleLabel) && (
+        <div
+          className={[
+            'border-t border-[var(--color-border)] p-3 shrink-0',
+            isCollapsed ? 'flex justify-center' : '',
+          ].join(' ')}
+          title={
+            isCollapsed
+              ? `${userName ?? ''}${userName && userRoleLabel ? ' · ' : ''}${userRoleLabel ?? ''}`
+              : undefined
+          }
+        >
+          <div
+            className={[
+              'flex items-center min-w-0',
+              isCollapsed ? 'justify-center' : 'gap-2.5',
+            ].join(' ')}
+          >
+            <UserAvatar name={userName} size="sm" />
+            {!isCollapsed && (
+              <div className="min-w-0 leading-tight">
+                {userName && (
+                  <p className="text-sm font-medium text-[var(--color-text-primary)] truncate">
+                    {userName}
+                  </p>
+                )}
+                {userRoleLabel && (
+                  <p className="text-xs text-[var(--color-text-muted)] truncate">
+                    {userRoleLabel}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 
   return (
     <>
-      <aside className="hidden lg:block w-[var(--sidebar-width)] shrink-0">
-        <div className="sticky top-0 h-dvh">{navContent}</div>
+      <aside
+        className={[
+          'hidden lg:block shrink-0 transition-[width] duration-200',
+          collapsed ? 'w-[72px]' : 'w-[var(--sidebar-width)]',
+        ].join(' ')}
+      >
+        <div className="sticky top-0 h-dvh">{renderContent(collapsed)}</div>
       </aside>
 
       {mobileOpen && (
@@ -109,7 +176,7 @@ export function Sidebar({
             className="fixed inset-0 bg-slate-900/40"
           />
           <aside className="relative z-10 w-[var(--sidebar-width)] max-w-[85vw] h-full">
-            {navContent}
+            {renderContent(false)}
           </aside>
         </div>
       )}

@@ -56,11 +56,13 @@ export function HelpGuideModal({
             </h2>
             <ul className="list-disc pl-5 space-y-1">
               <li>
-                Di pagi hari, buka menu <strong>Presensi</strong> dan tekan{' '}
+                Di pagi hari, buka menu <strong>Presensi</strong>, pastikan opsi{' '}
+                <strong>Presensi Masuk</strong> terpilih, lalu tekan{' '}
                 <strong>Catat Presensi Masuk</strong>.
               </li>
               <li>
-                Saat jam pulang, buka menu yang sama dan tekan{' '}
+                Saat jam pulang, buka menu yang sama, pilih opsi{' '}
+                <strong>Presensi Pulang</strong>, lalu tekan{' '}
                 <strong>Catat Presensi Pulang</strong>.
               </li>
               <li>

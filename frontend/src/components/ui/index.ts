@@ -18,6 +18,7 @@ export {
   IconHelpCircle,
   IconLogout,
   IconSettings,
+  IconSidebarToggle,
   IconUser,
   IconUsers,
 } from './Icons.tsx';

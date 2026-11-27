@@ -23,6 +23,7 @@ import {
   markAttendanceFrame,
 } from '../services/attendanceService.ts';
 import type {
+  AttendanceActionType,
   AttendanceMarkResponse,
   TodayAttendanceSummary,
 } from '../types/domain.ts';
@@ -46,6 +47,8 @@ export default function AttendancePage() {
   } = useWebcam();
 
   const [today, setToday] = useState<TodayAttendanceSummary | null>(null);
+  const [selectedType, setSelectedType] =
+    useState<AttendanceActionType>('CHECK_IN');
   const [loadingSummary, setLoadingSummary] = useState(true);
   const [summaryError, setSummaryError] = useState<string | null>(null);
 
@@ -66,6 +69,11 @@ export default function AttendancePage() {
     try {
       const data = await getTodayAttendance();
       setToday(data);
+      if (data.nextAction === 'CHECK_OUT') {
+        setSelectedType('CHECK_OUT');
+      } else {
+        setSelectedType('CHECK_IN');
+      }
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) {
         clearAuthenticatedUser();
@@ -242,8 +250,12 @@ export default function AttendancePage() {
     );
   }
 
-  const isCheckIn = today.nextAction === 'CHECK_IN';
-  const actionLabel = isCheckIn ? 'Presensi Masuk' : 'Presensi Pulang';
+  const hasCheckedIn = Boolean(today.todayRecord?.checkInAt);
+  const hasCheckedOut = Boolean(today.todayRecord?.checkOutAt);
+  const isCheckInSelected = selectedType === 'CHECK_IN';
+  const actionLabel = isCheckInSelected ? 'Presensi Masuk' : 'Presensi Pulang';
+  const checkInBlockedByExisting = isCheckInSelected && hasCheckedIn;
+  const checkOutBlockedByMissingCheckIn = !isCheckInSelected && !hasCheckedIn;
 
   const uiState: CameraUiState = (() => {
     if (webcamStatus === 'permission') return 'permission';
@@ -298,7 +310,7 @@ export default function AttendancePage() {
 
     try {
       const frameBlob = await captureFrameBlob();
-      const result = await markAttendanceFrame(frameBlob, today.nextAction);
+      const result = await markAttendanceFrame(frameBlob, selectedType);
 
       if (result.recorded && result.attendance) {
         stopCamera();
@@ -397,30 +409,157 @@ export default function AttendancePage() {
         </Link>
       </section>
 
-      <CameraCaptureFrame
-        state={uiState}
-        statusTitle={statusTitle}
-        statusMessage={
-          webcamStatus === 'unavailable'
-            ? (cameraError ?? undefined)
-            : statusMessage
-        }
-        captureLabel={
-          isCheckIn ? 'Catat Presensi Masuk' : 'Catat Presensi Pulang'
-        }
-        onRequestPermission={handleRequestPermission}
-        onCapture={() => {
-          void handleCaptureAndMark();
-        }}
-        onRetry={handleRetry}
-        previewSlot={
-          <WebcamPreview
-            videoRef={videoRef}
-            webcamStatus={webcamStatus}
-            detectedBox={null}
-          />
-        }
-      />
+      <section
+        aria-label="Pilih Jenis Presensi"
+        className="bg-white border border-[var(--color-border)] rounded-[var(--radius-md)] shadow-[var(--shadow-sm)] p-4 space-y-3"
+      >
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">
+            Pilih Jenis Presensi
+          </h2>
+          <span className="text-xs text-[var(--color-text-muted)]">
+            {hasCheckedIn ? 'Check-in selesai' : 'Langkah 1: Masuk'}
+          </span>
+        </div>
+
+        <div
+          role="radiogroup"
+          aria-label="Opsi presensi masuk dan pulang"
+          className="grid grid-cols-1 sm:grid-cols-2 gap-2.5"
+        >
+          <button
+            type="button"
+            role="radio"
+            aria-checked={isCheckInSelected}
+            onClick={() => {
+              if (hasCheckedIn) stopCamera();
+              setSelectedType('CHECK_IN');
+              handleRetry();
+            }}
+            className={[
+              'text-left rounded-[var(--radius-md)] border p-3 transition-colors cursor-pointer',
+              isCheckInSelected
+                ? 'border-[var(--color-accent)] bg-[var(--color-accent-subtle)]/70'
+                : 'border-[var(--color-border)] bg-white hover:bg-slate-50',
+            ].join(' ')}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-sm font-semibold text-[var(--color-text-primary)]">
+                Presensi Masuk
+              </span>
+              {hasCheckedIn ? (
+                <Badge tone="success">Tercatat</Badge>
+              ) : (
+                <Badge tone={isCheckInSelected ? 'accent' : 'neutral'}>
+                  {isCheckInSelected ? 'Dipilih' : 'Masuk'}
+                </Badge>
+              )}
+            </div>
+            <p className="text-xs text-[var(--color-text-secondary)] mt-1 tabular-nums">
+              {hasCheckedIn
+                ? `Masuk tercatat pukul ${formatWaktuWib(today.todayRecord?.checkInAt)}`
+                : `Dibuka ${today.rules.checkInStartTime} WIB · Jam masuk ${today.rules.workStartTime} WIB`}
+            </p>
+          </button>
+
+          <button
+            type="button"
+            role="radio"
+            aria-checked={!isCheckInSelected}
+            onClick={() => {
+              if (!hasCheckedIn) stopCamera();
+              setSelectedType('CHECK_OUT');
+              handleRetry();
+            }}
+            className={[
+              'text-left rounded-[var(--radius-md)] border p-3 transition-colors cursor-pointer',
+              !isCheckInSelected
+                ? 'border-[var(--color-accent)] bg-[var(--color-accent-subtle)]/70'
+                : 'border-[var(--color-border)] bg-white hover:bg-slate-50',
+            ].join(' ')}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-sm font-semibold text-[var(--color-text-primary)]">
+                Presensi Pulang
+              </span>
+              {hasCheckedOut ? (
+                <Badge tone="success">Tercatat</Badge>
+              ) : (
+                <Badge tone={!isCheckInSelected ? 'accent' : 'neutral'}>
+                  {!isCheckInSelected ? 'Dipilih' : 'Pulang'}
+                </Badge>
+              )}
+            </div>
+            <p className="text-xs text-[var(--color-text-secondary)] mt-1 tabular-nums">
+              {hasCheckedIn
+                ? `Jam pulang ${today.rules.workEndTime} – ${today.rules.checkOutEndTime} WIB`
+                : 'Tersedia setelah melakukan presensi masuk'}
+            </p>
+          </button>
+        </div>
+      </section>
+
+      {checkInBlockedByExisting ? (
+        <Alert
+          tone="success"
+          title="Presensi Masuk Hari Ini Sudah Tercatat"
+          action={
+            <Button
+              size="sm"
+              variant="primary"
+              onClick={() => setSelectedType('CHECK_OUT')}
+            >
+              Pindah ke Presensi Pulang
+            </Button>
+          }
+        >
+          Anda sudah mencatat presensi masuk pada pukul{' '}
+          {formatWaktuWib(today.todayRecord?.checkInAt)}. Gunakan opsi{' '}
+          <strong>Presensi Pulang</strong> saat jam kerja selesai.
+        </Alert>
+      ) : checkOutBlockedByMissingCheckIn ? (
+        <Alert
+          tone="warning"
+          title="Belum Ada Presensi Masuk"
+          action={
+            <Button
+              size="sm"
+              variant="primary"
+              onClick={() => setSelectedType('CHECK_IN')}
+            >
+              Pilih Presensi Masuk
+            </Button>
+          }
+        >
+          Anda belum melakukan presensi masuk hari ini. Catat{' '}
+          <strong>Presensi Masuk</strong> terlebih dahulu sebelum presensi pulang.
+        </Alert>
+      ) : (
+        <CameraCaptureFrame
+          state={uiState}
+          statusTitle={statusTitle}
+          statusMessage={
+            webcamStatus === 'unavailable'
+              ? (cameraError ?? undefined)
+              : statusMessage
+          }
+          captureLabel={
+            isCheckInSelected ? 'Catat Presensi Masuk' : 'Catat Presensi Pulang'
+          }
+          onRequestPermission={handleRequestPermission}
+          onCapture={() => {
+            void handleCaptureAndMark();
+          }}
+          onRetry={handleRetry}
+          previewSlot={
+            <WebcamPreview
+              videoRef={videoRef}
+              webcamStatus={webcamStatus}
+              detectedBox={null}
+            />
+          }
+        />
+      )}
 
       <details className="rounded-[var(--radius-md)] bg-white border border-[var(--color-border)] px-4 py-2.5 text-xs text-[var(--color-text-secondary)]">
         <summary className="font-medium text-[var(--color-text-primary)] cursor-pointer select-none">

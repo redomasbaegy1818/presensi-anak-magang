@@ -1,6 +1,10 @@
 import type { ReactNode } from 'react';
 import { Button } from '../ui/Button.tsx';
-import { IconHelpCircle, IconLogout } from '../ui/Icons.tsx';
+import {
+  IconHelpCircle,
+  IconLogout,
+  IconSidebarToggle,
+} from '../ui/Icons.tsx';
 import { UserAvatar } from '../ui/UserAvatar.tsx';
 
 export interface TopbarProps {
@@ -9,6 +13,8 @@ export interface TopbarProps {
   userRoleLabel?: string;
   onMenuClick?: () => void;
   menuExpanded?: boolean;
+  onSidebarToggle?: () => void;
+  sidebarCollapsed?: boolean;
   onHelpClick?: () => void;
   onLogout?: () => void;
   rightSlot?: ReactNode;
@@ -20,6 +26,8 @@ export function Topbar({
   userRoleLabel,
   onMenuClick,
   menuExpanded,
+  onSidebarToggle,
+  sidebarCollapsed = false,
   onHelpClick,
   onLogout,
   rightSlot,
@@ -47,6 +55,22 @@ export function Topbar({
                 clipRule="evenodd"
               />
             </svg>
+          </button>
+        )}
+        {onSidebarToggle && (
+          <button
+            type="button"
+            onClick={onSidebarToggle}
+            aria-expanded={!sidebarCollapsed}
+            aria-label={
+              sidebarCollapsed ? 'Perluas menu samping' : 'Perkecil menu samping'
+            }
+            title={
+              sidebarCollapsed ? 'Perluas menu samping' : 'Perkecil menu samping'
+            }
+            className="hidden lg:inline-flex size-9 items-center justify-center rounded-[var(--radius-md)] border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-subtle)] hover:text-[var(--color-text-primary)] transition-colors cursor-pointer"
+          >
+            <IconSidebarToggle className="size-4" />
           </button>
         )}
         <p className="lg:hidden text-base font-semibold text-[var(--color-text-primary)] truncate">

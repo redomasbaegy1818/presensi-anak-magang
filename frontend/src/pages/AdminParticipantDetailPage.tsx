@@ -336,19 +336,17 @@ export default function AdminParticipantDetailPage() {
           >
             {participant.status === 'ACTIVE' ? 'Nonaktifkan' : 'Aktifkan'}
           </Button>
-          {recentAttendances.length === 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-[var(--color-danger)] hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)]"
-              onClick={() => {
-                setDeleteError(null);
-                setDeleteModalOpen(true);
-              }}
-            >
-              Hapus Akun
-            </Button>
-          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-[var(--color-danger)] hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)]"
+            onClick={() => {
+              setDeleteError(null);
+              setDeleteModalOpen(true);
+            }}
+          >
+            Hapus Akun
+          </Button>
         </div>
       </div>
 

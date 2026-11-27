@@ -1,5 +1,7 @@
 import type {
   AdminOverviewResponse,
+  FaceBoundingBox,
+  FaceVerificationState,
   ParticipantProfile,
   ParticipantRegisterResponse,
   ParticipantRegistrationPayload,
@@ -59,12 +61,49 @@ export function getParticipantProfile(): Promise<{ profile: ParticipantProfile }
 export function forgotPasswordRequest(
   identifier: string,
   portal: 'PARTICIPANT' | 'ADMIN',
-): Promise<{ smtpConfigured: boolean; message: string }> {
-  return apiRequest<{ smtpConfigured: boolean; message: string }>(
-    '/auth/forgot-password',
+): Promise<{ smtpConfigured: boolean; expiresInMinutes: number; message: string }> {
+  return apiRequest<{
+    smtpConfigured: boolean;
+    expiresInMinutes: number;
+    message: string;
+  }>('/auth/forgot-password', {
+    method: 'POST',
+    body: { identifier, portal },
+  });
+}
+
+export function verifyResetCodeRequest(
+  identifier: string,
+  portal: 'PARTICIPANT' | 'ADMIN',
+  code: string,
+): Promise<{
+  valid: boolean;
+  portal: 'PARTICIPANT' | 'ADMIN';
+  accountLabel: string;
+  expiresAt: string;
+}> {
+  return apiRequest<{
+    valid: boolean;
+    portal: 'PARTICIPANT' | 'ADMIN';
+    accountLabel: string;
+    expiresAt: string;
+  }>('/auth/reset-password/verify-code', {
+    method: 'POST',
+    body: { identifier, portal, code },
+  });
+}
+
+export function resetPasswordWithCodeRequest(
+  identifier: string,
+  portal: 'PARTICIPANT' | 'ADMIN',
+  code: string,
+  password: string,
+): Promise<{ portal: 'PARTICIPANT' | 'ADMIN'; message: string }> {
+  return apiRequest<{ portal: 'PARTICIPANT' | 'ADMIN'; message: string }>(
+    '/auth/reset-password/with-code',
     {
       method: 'POST',
-      body: { identifier, portal },
+      body: { identifier, portal, code, password },
     },
   );
 }
@@ -94,4 +133,34 @@ export function resetPasswordRequest(
       body: { token, password },
     },
   );
+}
+
+export function verifyFaceForPasswordResetRequest(
+  email: string,
+  nimNis: string,
+  imageBlob: Blob,
+): Promise<{
+  verified: boolean;
+  verificationStatus: FaceVerificationState;
+  bbox: FaceBoundingBox | null;
+  resetToken?: string;
+  accountLabel?: string;
+  message: string;
+}> {
+  const formData = new FormData();
+  formData.append('email', email);
+  formData.append('nimNis', nimNis);
+  formData.append('image', imageBlob, 'face-reset.jpg');
+
+  return apiRequest<{
+    verified: boolean;
+    verificationStatus: FaceVerificationState;
+    bbox: FaceBoundingBox | null;
+    resetToken?: string;
+    accountLabel?: string;
+    message: string;
+  }>('/auth/reset-password/verify-face', {
+    method: 'POST',
+    body: formData,
+  });
 }

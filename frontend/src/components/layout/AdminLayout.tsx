@@ -12,9 +12,20 @@ export interface AdminLayoutProps {
   children: ReactNode;
 }
 
+const SIDEBAR_COLLAPSE_KEY = 'mp_admin_sidebar_collapsed';
+
+function readInitialCollapsed(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return window.localStorage.getItem(SIDEBAR_COLLAPSE_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
 /**
- * Desktop-first layout shell for Admin pages with persistent sidebar,
- * topbar, and accessible skip-to-content navigation.
+ * Desktop-first layout shell for Admin pages with collapsible persistent
+ * sidebar, topbar, and accessible skip-to-content navigation.
  */
 export function AdminLayout({
   pageTitle,
@@ -25,7 +36,20 @@ export function AdminLayout({
   children,
 }: AdminLayoutProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(readInitialCollapsed);
   const [helpOpen, setHelpOpen] = useState(false);
+
+  const handleToggleSidebar = () => {
+    setSidebarCollapsed((prev) => {
+      const next = !prev;
+      try {
+        window.localStorage.setItem(SIDEBAR_COLLAPSE_KEY, String(next));
+      } catch {
+        // Ignore storage write errors in restricted modes.
+      }
+      return next;
+    });
+  };
 
   return (
     <div className="min-h-dvh flex bg-[var(--color-bg-page)]">
@@ -36,6 +60,9 @@ export function AdminLayout({
       <Sidebar
         items={navItems}
         onNavigate={onNavigate}
+        collapsed={sidebarCollapsed}
+        userName={userName}
+        userRoleLabel="Administrator"
         mobileOpen={mobileOpen}
         onCloseMobile={() => setMobileOpen(false)}
       />
@@ -43,10 +70,10 @@ export function AdminLayout({
       <div className="flex-1 min-w-0 flex flex-col">
         <Topbar
           title={pageTitle}
-          userName={userName}
-          userRoleLabel="Administrator"
           onMenuClick={() => setMobileOpen(true)}
           menuExpanded={mobileOpen}
+          onSidebarToggle={handleToggleSidebar}
+          sidebarCollapsed={sidebarCollapsed}
           onHelpClick={() => setHelpOpen(true)}
           onLogout={onLogout}
         />

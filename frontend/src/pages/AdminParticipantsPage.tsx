@@ -18,6 +18,7 @@ import { useAuth } from '../hooks/useAuth.ts';
 import { usePageTitle } from '../hooks/usePageTitle.ts';
 import { ApiError } from '../services/apiClient.ts';
 import {
+  deleteAdminParticipant,
   getAdminParticipants,
   updateAdminParticipantStatus,
 } from '../services/adminService.ts';
@@ -72,6 +73,11 @@ export default function AdminParticipantsPage() {
     null,
   );
   const [statusSubmitting, setStatusSubmitting] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<ParticipantProfile | null>(
+    null,
+  );
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const handleUnauthorized = useCallback(() => {
     clearAuthenticatedUser();
@@ -173,6 +179,36 @@ export default function AdminParticipantsPage() {
     }
   };
 
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleteSubmitting(true);
+    setDeleteError(null);
+
+    try {
+      const res = await deleteAdminParticipant(deleteTarget.id);
+      const removedLastOnPage = rows.length === 1 && page > 1;
+      setDeleteTarget(null);
+      setFeedbackBanner(res.message);
+      if (removedLastOnPage) {
+        setPage((p) => Math.max(1, p - 1));
+      } else {
+        void fetchParticipants();
+      }
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) {
+        handleUnauthorized();
+        return;
+      }
+      setDeleteError(
+        error instanceof ApiError
+          ? error.message
+          : 'Gagal menghapus peserta magang.',
+      );
+    } finally {
+      setDeleteSubmitting(false);
+    }
+  };
+
   const divisionOptions = [
     { value: 'ALL', label: 'Semua Divisi' },
     ...divisions.map((div) => ({ value: div, label: div })),
@@ -240,7 +276,7 @@ export default function AdminParticipantsPage() {
       header: 'Tindakan',
       align: 'right',
       render: (row) => (
-        <div className="inline-flex items-center justify-end gap-1.5">
+        <div className="inline-flex flex-wrap items-center justify-end gap-1.5">
           <Button
             size="sm"
             variant="ghost"
@@ -261,6 +297,17 @@ export default function AdminParticipantsPage() {
             onClick={() => setStatusTarget(row)}
           >
             {row.status === 'ACTIVE' ? 'Nonaktifkan' : 'Aktifkan'}
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="text-[var(--color-danger)] hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)]"
+            onClick={() => {
+              setDeleteError(null);
+              setDeleteTarget(row);
+            }}
+          >
+            Hapus
           </Button>
         </div>
       ),
@@ -450,6 +497,65 @@ export default function AdminParticipantsPage() {
               ? `Apakah Anda yakin ingin menonaktifkan ${statusTarget.fullName} (${statusTarget.nimNis})? Peserta yang dinonaktifkan tidak dapat masuk maupun melakukan presensi, dan sesi login aktifnya akan segera dihentikan.`
               : `Aktifkan kembali akun ${statusTarget.fullName} (${statusTarget.nimNis}) agar dapat masuk dan melakukan presensi?`}
           </p>
+        )}
+      </Modal>
+
+      <Modal
+        open={Boolean(deleteTarget)}
+        onClose={() => {
+          if (!deleteSubmitting) setDeleteTarget(null);
+        }}
+        title="Hapus Akun Peserta Permanen"
+        footer={
+          <>
+            <Button
+              variant="secondary"
+              disabled={deleteSubmitting}
+              onClick={() => setDeleteTarget(null)}
+            >
+              Batal
+            </Button>
+            {deleteError && deleteTarget?.status === 'ACTIVE' && (
+              <Button
+                variant="secondary"
+                disabled={deleteSubmitting}
+                onClick={() => {
+                  const target = deleteTarget;
+                  setDeleteTarget(null);
+                  setDeleteError(null);
+                  setStatusTarget(target);
+                }}
+              >
+                Nonaktifkan Saja
+              </Button>
+            )}
+            <Button
+              variant="danger"
+              loading={deleteSubmitting}
+              onClick={() => void handleConfirmDelete()}
+            >
+              Hapus Permanen
+            </Button>
+          </>
+        }
+      >
+        {deleteTarget && (
+          <div className="space-y-3">
+            {deleteError && (
+              <Alert tone="danger" title="Penghapusan Ditolak">
+                {deleteError}
+              </Alert>
+            )}
+            <p className="text-sm text-[var(--color-text-secondary)]">
+              Anda akan menghapus akun{' '}
+              <strong>{deleteTarget.fullName}</strong> ({deleteTarget.nimNis})
+              beserta data login dan pendaftaran wajahnya secara permanen.
+            </p>
+            <p className="text-xs text-[var(--color-text-muted)]">
+              Penghapusan permanen hanya berlaku untuk peserta yang belum
+              memiliki catatan presensi agar rekap laporan kantor tetap utuh.
+            </p>
+          </div>
         )}
       </Modal>
     </div>
